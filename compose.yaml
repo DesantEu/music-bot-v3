@@ -1,0 +1,21 @@
+name: music-bot
+
+services:
+  discord-bot:
+    build:
+      context: ./
+      target: base
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_TEST_TOKEN=${DISCORD_TEST_TOKEN}
+    volumes:
+      # - .:/app
+      - bot_cache:/app/saves
+      - bot_downloads:/app/songs
+      - bot_playlists:/app/playlists
+    command: python -u main.py
+
+volumes:
+  bot_cache:
+  bot_downloads:
+  bot_playlists:
