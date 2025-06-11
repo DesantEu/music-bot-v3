@@ -1,4 +1,5 @@
 import discord
+from discord import ApplicationContext as actx
 from network import ytHandler as yt
 from network import dcHandler as dc
 from locales import bot_locale as loc
@@ -7,16 +8,18 @@ import re
 from playback import pastQ as past
 from storage import cacheHandler as cahe
 
-async def play(message:discord.Message, prompt:str, inst):
+async def play(ctx: actx, prompt:str, inst):
     # handle empty prompts
     if prompt == '' and not inst.isPaused:
         """ await dc.send(loc.no_prompt, message.channel) """
-        await message.add_reaction(dc.reactions.fyou)
+        # await message.add_reaction(dc.reactions.fyou)
+        await ctx.respond(dc.reactions.fyou)
         return
 
     # check if the user is in a vc
-    if not dc.isInVC(message.author):
-        await dc.send(loc.no_vc, message.channel)
+    if not dc.isInVC(ctx.author):
+        # await dc.send(loc.no_vc, message.channel)
+        await ctx.respond(loc.no_vc)
         return -1
 
 
@@ -26,24 +29,25 @@ async def play(message:discord.Message, prompt:str, inst):
     if prompt.startswith('https://'):
         # handle playlists
         if 'list=' in prompt:
-            isSuccessful = await cahe.find_link_play(message, yt.remove_playlist_from_link(prompt), inst)
+            isSuccessful = await cahe.find_link_play(ctx, yt.remove_playlist_from_link(prompt), inst)
 
         # handle a single song
         else:
-            isSuccessful = await cahe.find_link_play(message, prompt, inst)
+            isSuccessful = await cahe.find_link_play(ctx, prompt, inst)
     # handle text search
     else:
-        isSuccessful = await cahe.find_prompt_play(message, prompt, inst)
+        isSuccessful = await cahe.find_prompt_play(ctx, prompt, inst)
 
     if not isSuccessful == 0:
         return -1
 
     # check vc again just to be sure
-    if not dc.isInVC(message.author):
-        await dc.send(loc.left_vc, message.channel)
+    if not dc.isInVC(ctx.author):
+        await ctx.respond(loc.left_vc)
+        # await dc.send(loc.left_vc, ctx.channel)
         return -1
     else:
-        await dc.join(message, inst)
+        await dc.join(ctx, inst)
         if not inst.isPlaying:
             play_from_queue(0, inst) # TODO: remove
     

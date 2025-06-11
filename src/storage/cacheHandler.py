@@ -5,6 +5,7 @@ from network import ytHandler as yt
 from network import dcHandler as dc
 from locales import bot_locale as loc
 from playback import playlists
+# import discord
 
 class CachedSong:
     def __init__(self, link: str='', title: str='', searches: list[str]=[], is_playlist=False):
@@ -188,6 +189,10 @@ async def on_search_success(message, inst, emb, title, link, st, silent, squ) ->
         await inst.update_queue()
     return 0
 
+
+def get_autocomplete(ctx) -> list[str]:
+    print(f"autocomplete got: '{ctx.value}'")
+    return [i for i in search_cache.keys() if i.startswith(ctx.value)]
 
 
 def add_to_cache(song: CachedSong):
