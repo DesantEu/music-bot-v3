@@ -1,3 +1,5 @@
-discord.py
+py-cord
+py-cord[voice]
+audioop-lts
 PyNaCl
 yt-dlp
