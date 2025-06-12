@@ -9,6 +9,7 @@ from playback import player
 from network import dcHandler as dc
 from storage import db
 from storage import cacheHandler as cahe
+from playback import localPlaylists as lpl
 
 
 class User(Cog):
@@ -48,6 +49,44 @@ class User(Cog):
         else:
             await ctx.respond(dc.reactions.cross)
 
+    skip_group = SlashCommandGroup("skip")
+
+    @skip_group.command(
+        name="one",
+        description="Скіпнути один трек",
+    )
+    async def skip_one(self, ctx: actx):
+        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+
+        if not inst.hasVC():
+            await ctx.send_response(dc.reactions.fyou, ephemeral=True)
+            return
+        if player.skip(inst) == 0:
+            await ctx.send_response(dc.reactions.check, ephemeral=True)
+        else:
+            await ctx.send_response(dc.reactions.cross, ephemeral=True)
+
+    @skip_group.command(
+        name="to",
+        description="Скіпнути по номеру",
+        options=[
+            Option( 
+                description="Куди скіпаємо?", 
+                name="target",
+            ),
+        ], 
+    )
+    async def skip_to(self, ctx: actx, target: str):
+        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+
+        if not inst.hasVC():
+            await ctx.send_response(dc.reactions.fyou, ephemeral=True)
+            return
+        if player.skip(inst, target) == 0:
+            await ctx.send_response(dc.reactions.check, ephemeral=True)
+        else:
+            await ctx.send_response(dc.reactions.cross, ephemeral=True)
+
 
     playlist_group = SlashCommandGroup("playlist")
 
@@ -62,10 +101,17 @@ class User(Cog):
 
     @playlist_group.command(
         name="local", 
-        description="playlist by name"
+        description="playlist by name",
+        options=[
+            Option( 
+                description="Назва", 
+                name="name", 
+                autocomplete=cahe.get_autocomplete
+            ),
+        ]
     )
-    async def playlist_local(self, ctx: actx, name):
-        await ctx.send_response(name, ephemeral=True)
+    async def playlist_local(self, ctx: actx, name: str):
+        await lpl.list_playlists(ctx, name)
 
 
 

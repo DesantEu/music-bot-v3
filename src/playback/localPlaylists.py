@@ -122,3 +122,11 @@ async def list_playlists(ctx: actx, name):
 
             await dc.send_long(loc.playlist_content, name, [['>', i] for i in playlist], ctx)
                 # await dc.send_long(str(songs), message.channel, title=f'Плейлист {name}:')
+
+def get_autocomplete(ctx) -> list[str]:
+    print(f"autocomplete got: '{ctx.value}'")
+    
+    path = 'playlists'
+    files = [f[:-4] for f in os.listdir(path) if f.endswith('.lpl')]
+
+    return [i for i in files if i.startswith(ctx.value)]
