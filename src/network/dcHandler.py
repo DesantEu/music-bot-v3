@@ -1,4 +1,5 @@
 import discord
+from discord import ApplicationContext as actx
 from locales import bot_locale as loc
 
 # TODO: 
@@ -17,7 +18,7 @@ class LongMessage:
         self.isMultipage = False
         self.hasReactions = False #TODO: there must be a way to avoid this
 
-        self.message:discord.Message
+        self.message: discord.Message | discord.Interaction
 
         self.regenerate()
 
@@ -51,6 +52,7 @@ class LongMessage:
 
             self.isMultipage = False
 
+
     def genEmbed(self, color=color_pink):
         emb = discord.Embed(title=self.title)
         emb.color = color
@@ -79,9 +81,13 @@ class LongMessage:
         await self.message.edit(embed=self.genEmbed());
 
 
-    async def send(self, channel:discord.TextChannel, color=color_pink):
-        self.message = await channel.send(embed=self.genEmbed(color=color))
-        await self.refreshReactions()
+    async def send(self, ctx: actx, color=color_pink, respond=False, ephemeral=False):
+        if respond:
+            interaction = await ctx.send_response(embed=self.genEmbed(color=color), ephemeral=ephemeral)
+            self.message = interaction
+        else:
+            self.message = await ctx.channel.send(embed=self.genEmbed(color=color))
+        # await self.refreshReactions()
 
 
     async def parse_reaction(self, reaction):
@@ -111,24 +117,24 @@ class LongMessage:
             return 0
         return -1
 
-    async def refreshReactions(self):
-        if self.isMultipage and not self.hasReactions:
-            await self.message.clear_reaction(reactions.right_arrow)
-            await self.message.clear_reaction(reactions.left_arrow)
-            await self.message.add_reaction(reactions.left_arrow)
-            await self.message.add_reaction(reactions.right_arrow)
-            self.hasReactions = True
+    # async def refreshReactions(self):
+    #     if self.isMultipage and not self.hasReactions:
+    #         await self.message.clear_reaction(reactions.right_arrow)
+    #         await self.message.clear_reaction(reactions.left_arrow)
+    #         await self.message.add_reaction(reactions.left_arrow)
+    #         await self.message.add_reaction(reactions.right_arrow)
+    #         self.hasReactions = True
 
-        if not self.isMultipage and self.hasReactions:
-            await self.message.clear_reaction(reactions.right_arrow)
-            await self.message.clear_reaction(reactions.left_arrow)
-            self.hasReactions = False
+    #     if not self.isMultipage and self.hasReactions:
+    #         await self.message.clear_reaction(reactions.right_arrow)
+    #         await self.message.clear_reaction(reactions.left_arrow)
+    #         self.hasReactions = False
         
     async def setContent(self, content:list[list[str]]):
         self.content = content
         self.regenerate()
         await self.message.edit(embed=self.genEmbed())
-        await self.refreshReactions()
+        # await self.refreshReactions()
         return 0
 
     def append(self):
@@ -141,21 +147,28 @@ class LongMessage:
 messages:dict[int, discord.Message] = {}
 long_messages:dict[int, LongMessage] = {}
 
-async def send(msg:str, channel, color=color_pink):
+async def send(msg:str, ctx: actx, color=color_pink, ephemeral=False, respond=True) -> int:
     if msg == '':
         emb = discord.Embed()
     else:
         emb = discord.Embed(title=msg)
     emb.color = color
-    message = await channel.send(embed=emb)
-    messages[message.id] = message
-    return message.id
+    if respond:
+        interaction = await ctx.send_response(embed=emb, ephemeral=ephemeral)
+        if interaction.message: 
+            messages[interaction.message.id] = interaction.message
+            return interaction.message.id
+    else:
+        message = await ctx.channel.send(embed=emb) 
+        messages[message.id] = message
+        return message.id
+    return -1
 
-async def send_long(title:str, smaller_title:str, content:list[list[str]], channel, color=color_pink):
+async def send_long(title:str, smaller_title:str, content:list[list[str]], ctx: actx, color=color_pink, ephemeral=False, respond=True):
     global long_messages
 
     msg = LongMessage(title, smaller_title, content)
-    await msg.send(channel, color)
+    await msg.send(ctx, color, respond, ephemeral)
     long_messages[msg.message.id] = msg
     return msg.message.id
 
@@ -243,15 +256,15 @@ def isInVC(author):
     return type(author) == discord.Member and not author.voice is None
 
 
-async def join(message, inst) -> int:
+async def join(ctx: actx, inst) -> int:
     try:
         # connect if not yet connected
         if not inst.hasVC():
-            inst.vc = await message.author.voice.channel.connect()
+            inst.vc = await ctx.user.voice.channel.connect()
             return 0
         # move to other channel maybe
-        if not inst.vc.channel == message.author.voice.channel:
-            await inst.vc.move_to(message.author.voice.channel)
+        if not inst.vc.channel == ctx.user.voice.channel:
+            await inst.vc.move_to(ctx.user.voice.channel)
         return 0
     except Exception as e:
         print(f"exception caught: {e}")

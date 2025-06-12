@@ -21,7 +21,7 @@ class User(Cog):
         options=[
             Option( 
                 description="Назва або посилання", 
-                name="song", 
+                name="search", 
                 autocomplete=cahe.get_autocomplete
             ),
         ], 
@@ -30,7 +30,6 @@ class User(Cog):
         inst = handler.getInstance(ctx.guild_id, ctx.bot)
 
         await player.play(ctx, song, inst)
-        await ctx.send_response(dc.reactions.thumbs_up, view=views.Queue(), ephemeral=True)
 
 
     @slash_command(
@@ -58,7 +57,7 @@ class User(Cog):
         description="playlist by link"
     )
     async def playlist(self, ctx: actx, link: str):
-        await ctx.send_response(link, ephemeral=True)
+        await ctx.send_response("шо не работает?", ephemeral=True)
 
 
     @playlist_group.command(
@@ -67,11 +66,6 @@ class User(Cog):
     )
     async def playlist_local(self, ctx: actx, name):
         await ctx.send_response(name, ephemeral=True)
-
-    
-
-
-
 
 
 

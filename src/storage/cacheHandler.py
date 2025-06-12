@@ -5,6 +5,7 @@ from network import ytHandler as yt
 from network import dcHandler as dc
 from locales import bot_locale as loc
 from playback import playlists
+from discord import ApplicationContext as actx
 # import discord
 
 class CachedSong:
@@ -45,7 +46,7 @@ search_cache: dict[str, CachedSong]
 # playlist id - song with song ids in searches
 playlist_cache: dict[str, CachedSong]
 
-async def find_link_play(message, link, inst, silent=False, skipQueueUpdate=False) -> int:
+async def find_link_play(ctx: actx, link, inst, silent=False, skipQueueUpdate=False) -> int:
     global search_cache, cache
     emb = ''
     st = -2
@@ -54,15 +55,15 @@ async def find_link_play(message, link, inst, silent=False, skipQueueUpdate=Fals
     prompt = yt.get_id_from_link(link)
 
     if prompt == '':
-        await dc.send(loc.search_fail, loc.sorry)
+        await ctx.send_response(loc.search_fail, ephemeral=True)
 
     # notify that we are working
-    if not silent: emb = await dc.send(loc.loading_track, message.channel)
+    if not silent: emb = await ctx.send_response(loc.loading_track, ephemeral=True)
 
     if prompt in cache:
         # add song name
         if not silent: st = await dc.add_status(emb, cache[prompt].title, loc.search_local)
-        return await play_cached(message, cache[prompt], inst, silent, emb, st, skipQueueUpdate)
+        return await play_cached(ctx, cache[prompt], inst, silent, emb, st, skipQueueUpdate)
 
     else:
         # notify that we are searching
@@ -75,14 +76,14 @@ async def find_link_play(message, link, inst, silent=False, skipQueueUpdate=Fals
             cache[info.link] = info
             for i in info.searches:
                 search_cache[i] = info
-            return await play_cached(message, info, inst, silent, emb, st, skipQueueUpdate)
+            return await play_cached(ctx, info, inst, silent, emb, st, skipQueueUpdate)
 
         else:
             if not silent: await dc.edit_status(emb, st, loc.search_fail)
             return -1
 
 
-async def find_prompt_play(message, prompt: str, inst, silent=False, skipQueueUpdate=False) -> int:
+async def find_prompt_play(ctx: actx, prompt: str, inst, silent=False, skipQueueUpdate=False) -> int:
     global search_cache, cache
     emb = ''
     st = -2
@@ -90,12 +91,12 @@ async def find_prompt_play(message, prompt: str, inst, silent=False, skipQueueUp
     prompt = prompt.lower()
 
     # notify that we are working
-    if not silent: emb = await dc.send(loc.loading_track, message.channel)
+    if not silent: emb = await dc.send(loc.loading_track, ctx, ephemeral=True)
 
     if prompt in search_cache:
         # add song name
         if not silent: st = await dc.add_status(emb, search_cache[prompt].title, loc.search_local)
-        return await play_cached(message, search_cache[prompt], inst, silent, emb, st, skipQueueUpdate)
+        return await play_cached(ctx, search_cache[prompt], inst, silent, emb, st, skipQueueUpdate)
 
     else:
         # notify that we are searching
@@ -117,23 +118,23 @@ async def find_prompt_play(message, prompt: str, inst, silent=False, skipQueueUp
                 for i in info.searches:
                     search_cache[i] = info
 
-            return await play_cached(message, info, inst, silent, emb, st, skipQueueUpdate)
+            return await play_cached(ctx, info, inst, silent, emb, st, skipQueueUpdate)
 
         else:
             if not silent: await dc.edit_status(emb, st, loc.search_fail)
             return -1
 
 
-async def find_playlist_play(message, prompt: str, inst) -> int:
+async def find_playlist_play(ctx: actx, prompt: str, inst) -> int:
     global playlist_cache
     id = yt.get_id_from_playlist_link(prompt)
 
     if id in playlist_cache:
         await playlists.play_bulk(['https://www.youtube.com/watch?v='+i for i in playlist_cache[id].searches]
-                                  , inst, message, title=loc.playlist_on, sub_title=f"{playlist_cache[id].title}")
+                                  , inst, ctx, title=loc.playlist_on, sub_title=f"{playlist_cache[id].title}")
     else:
         # notify of the long ass wait
-        await dc.send(loc.wait, message.channel)
+        await ctx.send_response(loc.wait, ephemeral=True)
         # message.channel.send(loc.wait)
 
         # get the big ass playlist data
@@ -146,14 +147,14 @@ async def find_playlist_play(message, prompt: str, inst) -> int:
 
         # play this piece of shit
         await playlists.play_bulk(['https://www.youtube.com/watch?v='+i for i in info.searches]
-                                  , inst, message, title=loc.playlist_on, sub_title=f"{playlist_cache[id].title}")
+                                  , inst, ctx, title=loc.playlist_on, sub_title=f"{playlist_cache[id].title}")
         
 
     return 0
 
 
 
-async def play_cached(message, song: CachedSong, inst, silent, emb, st, squ) -> int:
+async def play_cached(ctx: actx, song: CachedSong, inst, silent, emb, st, squ) -> int:
     # search for song on disk
     filename = 'songs/' + re.sub(r'[\|/,:&$#"]', '', song.link) + '.mp3'
     full_link = 'https://www.youtube.com/watch?v=' + song.link
@@ -165,22 +166,22 @@ async def play_cached(message, song: CachedSong, inst, silent, emb, st, squ) -> 
         dl = await yt.download(full_link, filename)
         # check how that went
         if dl == 0:
-            return await on_search_success(message, inst, emb, song.title, full_link, st, silent, squ)
+            return await on_search_success(ctx, inst, emb, song.title, full_link, st, silent, squ)
         else:
             if not silent: await dc.edit_status(emb, st, loc.download_fail)
             return -1
     else:
 
-        return await on_search_success(message, inst, emb, song.title, full_link, st, silent, squ)
+        return await on_search_success(ctx, inst, emb, song.title, full_link, st, silent, squ)
 
 
-async def on_search_success(message, inst, emb, title, link, st, silent, squ) -> int:
+async def on_search_success(ctx: actx, inst, emb, title, link, st, silent, squ) -> int:
     if not silent:
         await dc.edit_status(emb, st, loc.search_local_success)
         # add instaplay reaction
         if inst.queue.len() > 0:
-            msg = await message.channel.fetch_message(emb)
-            await msg.add_reaction(dc.reactions.play)
+            msg = await ctx.channel.fetch_message(emb)
+            # await msg.add_reaction(dc.reactions.play)
 
     inst.queue.append(link, title, emb)
     if not silent: 

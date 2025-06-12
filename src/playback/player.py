@@ -11,15 +11,12 @@ from storage import cacheHandler as cahe
 async def play(ctx: actx, prompt:str, inst):
     # handle empty prompts
     if prompt == '' and not inst.isPaused:
-        """ await dc.send(loc.no_prompt, message.channel) """
-        # await message.add_reaction(dc.reactions.fyou)
-        await ctx.respond(dc.reactions.fyou)
+        await ctx.send_response(dc.reactions.fyou, ephemeral=True)
         return
 
     # check if the user is in a vc
     if not dc.isInVC(ctx.author):
-        # await dc.send(loc.no_vc, message.channel)
-        await ctx.respond(loc.no_vc)
+        await ctx.send_response(loc.no_vc, ephemeral=True)
         return -1
 
 
@@ -43,8 +40,7 @@ async def play(ctx: actx, prompt:str, inst):
 
     # check vc again just to be sure
     if not dc.isInVC(ctx.author):
-        await ctx.respond(loc.left_vc)
-        # await dc.send(loc.left_vc, ctx.channel)
+        await ctx.send_response(loc.left_vc, ephemeral=True)
         return -1
     else:
         await dc.join(ctx, inst)
