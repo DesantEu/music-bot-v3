@@ -21,7 +21,7 @@ admins = ['desantua']
 
 instances:dict[int, Instance] = {}
 
-async def getInstance(gid: int, bot) -> Instance:
+def getInstance(gid: int, bot) -> Instance:
     if not gid in instances.keys():
         instances[gid] = Instance(gid, prefix, bot)
 

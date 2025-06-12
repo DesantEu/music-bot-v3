@@ -3,3 +3,4 @@ py-cord[voice]
 audioop-lts
 PyNaCl
 yt-dlp
+mysql-connector-python

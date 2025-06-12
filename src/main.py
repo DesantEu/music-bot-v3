@@ -74,7 +74,7 @@ import os
 import discord
 from core import commands
 from core import handler
-import inspect
+from storage import db
 
 
 bot = discord.Bot()
@@ -84,6 +84,8 @@ async def on_ready():
     if not bot.user is None:
         print(f'{bot.user.name} is up and ready')
 
+        await db.init()
+
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -92,14 +94,12 @@ async def on_voice_state_update(member, before, after):
 
 
 # add commands
-# this is probably hacky but eh
+bot.add_cog(commands.User(bot))
+bot.add_cog(commands.Admin(bot))
 
-for name, value in inspect.getmembers(commands):
-    if isinstance(value, discord.ApplicationCommand):
-        print(f"Adding '{name}'")
-        bot.add_application_command(value)
+# db.init()
 
 
-token = os.environ["DISCORD_TEST_TOKEN"]
-# token = os.environ["DISCORD_TOKEN"]
+# token = os.environ["DISCORD_TEST_TOKEN"]
+token = os.environ["DISCORD_TOKEN"]
 bot.run(token)

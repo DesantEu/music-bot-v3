@@ -1,21 +1,58 @@
 name: music-bot
 
 services:
+  proxy:
+    image: traefik:v2.11
+    command: --providers.docker
+    ports:
+      - 80:80
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
   discord-bot:
     build:
       context: ./
       target: base
+    develop:
+      watch:
+        - path: ./src
+          action: rebuild
     environment:
-      - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - DISCORD_TEST_TOKEN=${DISCORD_TEST_TOKEN}
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_TEST_TOKEN: ${DISCORD_TEST_TOKEN}
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DB: discord
     volumes:
       # - .:/app
       - bot_cache:/app/saves
       - bot_downloads:/app/songs
       - bot_playlists:/app/playlists
-    command: python -u main.py
+    # command: python -u main.py
+
+  mysql:
+    image: mysql:9.3.0
+    volumes:
+      - bot_mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: discord
+    command: --log-error-verbosity=1 # shut up the logs
+
+  phpmyadmin:
+    image: phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # APACHE_LOG_DIR: /dev/null # shut up the logs
+    labels:
+      traefik.http.routers.phpmyadmin.rule: Host(`db.localhost`)
+      traefik.http.services.phpmyadmin.loadbalancer.server.port: 80
 
 volumes:
   bot_cache:
   bot_downloads:
   bot_playlists:
+  bot_mysql:
