@@ -109,6 +109,25 @@ class User(Cog):
         emb = await dc.send_long(loc.queue, song_title, content, ctx)
         inst.queue_messages.append(emb)
 
+    @slash_command(
+        description="Я ХОЧУ ОЧИСТИТИ МУЗИКУ"
+    )
+    async def clear(self, ctx: actx):
+        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+
+        if not inst.hasVC() or inst.queue.len() == 0:
+            await ctx.send_response(dc.reactions.fyou, ephemeral=True)
+            return
+
+        if player.stop(inst):
+            inst.update_now_playing()
+            await inst.update_queue()
+            await ctx.send_response(dc.reactions.check, ephemeral=True)
+
+        else:
+            await ctx.send_response(dc.reactions.cross, ephemeral=True)
+
+
 
     playlist_group = SlashCommandGroup("playlist")
 
