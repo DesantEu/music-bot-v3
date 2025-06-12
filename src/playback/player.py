@@ -40,7 +40,7 @@ async def play(ctx: actx, prompt:str, inst):
 
     # check vc again just to be sure
     if not dc.isInVC(ctx.author):
-        await ctx.send_response(loc.left_vc, ephemeral=True)
+        await ctx.send_followup(loc.left_vc, ephemeral=True)
         return -1
     else:
         await dc.join(ctx, inst)

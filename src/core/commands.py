@@ -10,6 +10,7 @@ from network import dcHandler as dc
 from storage import db
 from storage import cacheHandler as cahe
 from playback import localPlaylists as lpl
+from locales import bot_locale as loc
 
 
 class User(Cog):
@@ -49,7 +50,9 @@ class User(Cog):
         else:
             await ctx.respond(dc.reactions.cross)
 
+
     skip_group = SlashCommandGroup("skip")
+
 
     @skip_group.command(
         name="one",
@@ -88,6 +91,25 @@ class User(Cog):
             await ctx.send_response(dc.reactions.cross, ephemeral=True)
 
 
+    @slash_command(
+        description="Я ХОЧУ ВЗНАТИ ШО ГРАЄ"
+    )
+    async def queue(self, ctx: actx):
+        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+
+        if inst.queue.len() == 0 or not inst.hasVC():
+            await ctx.send_response(dc.reactions.fyou, ephemeral=True)
+            return
+
+        content = inst.queue.toContent()
+        if inst.queue.len() == 0:
+            song_title = "..."
+        else:
+            song_title = f"{loc.now_playing} {inst.current + 1}. {inst.queue[inst.current].title}"
+        emb = await dc.send_long(loc.queue, song_title, content, ctx)
+        inst.queue_messages.append(emb)
+
+
     playlist_group = SlashCommandGroup("playlist")
 
 
@@ -101,16 +123,33 @@ class User(Cog):
 
     @playlist_group.command(
         name="local", 
-        description="playlist by name",
+        description="Включити плейліст бота",
         options=[
             Option( 
                 description="Назва", 
                 name="name", 
-                autocomplete=cahe.get_autocomplete
+                autocomplete=lpl.get_autocomplete
             ),
         ]
     )
-    async def playlist_local(self, ctx: actx, name: str):
+    async def playlist_local_play(self, ctx: actx, name: str):
+        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+
+        await lpl.play_playlist(ctx, name, inst)
+
+
+    @playlist_group.command(
+        name="check", 
+        description="Подивитись шо в плейлісті",
+        options=[
+            Option( 
+                description="Назва", 
+                name="name", 
+                autocomplete=lpl.get_autocomplete
+            ),
+        ]
+    )
+    async def playlist_local_check(self, ctx: actx, name: str):
         await lpl.list_playlists(ctx, name)
 
 
@@ -147,6 +186,6 @@ class Admin(Cog):
 
     @slash_command()
     async def test(self, ctx: actx):
-        await db.create_cache()
+        # await db.create_cache()
         await ctx.send_response(dc.reactions.fyou, view=views.Queue(), ephemeral=True)
 

@@ -15,13 +15,13 @@ async def play_playlist(ctx: actx, name, inst) -> int:
 
     # check if the user is in a vc
     if not dc.isInVC(ctx.user):
-        await ctx.send_response(loc.no_vc, ctx)
+        await ctx.send_response(loc.no_vc, ephemeral=True)
         return -1
 
 
     # check if playlist exists
     if not os.path.exists(f'playlists/{name}.lpl'):
-        await ctx.send_response(loc.playlist_not_found, ctx)
+        await ctx.send_response(loc.playlist_not_found, ephemeral=True)
         return -1
 
     # open the playlist
@@ -29,12 +29,12 @@ async def play_playlist(ctx: actx, name, inst) -> int:
         try:
             playlist:dict = json.loads(file.read())
         except:
-            await ctx.send_response(loc.playlist_broken, ctx)
+            await ctx.send_response(loc.playlist_broken, ephemeral=True)
             return -1
             
 
         # notify the server
-        emb = await dc.send_long(loc.playlist_on, name, [['-', i] for i in playlist], ctx)
+        emb = await dc.send_long(loc.playlist_on, name, [['-', i] for i in playlist], ctx, ephemeral=True)
         song_available = False
         tried_connecting = False
 
@@ -72,7 +72,7 @@ async def play_playlist(ctx: actx, name, inst) -> int:
             await ctx.send_response(loc.left_vc, ephemeral=True)
 
         # await dc.add_status(emb, loc.playlist_success, dc.reactions.pls_tears)
-        await ctx.message.add_reaction(dc.reactions.check)
+        # await ctx.message.add_reaction(dc.reactions.check)
         await inst.update_queue()
 
         return 0
@@ -85,7 +85,7 @@ async def save_playlist(ctx: actx, name, inst):
         return -1
 
 
-    if os.path.exists(f'playlists/{name}.lpl'):
+    if os.path.exists(f'playlists/{name}.lpl'): # TODO: THIS IS NOT AN EMBED CHANGE THIS
         emb = await ctx.send_response(loc.playlist_rewrite + name)
     else:
         emb = await ctx.send_response(loc.playlist_saving + name)
@@ -98,18 +98,18 @@ async def save_playlist(ctx: actx, name, inst):
         await dc.add_status(emb, dc.reactions.cross, dc.reactions.hot)
 
 
-async def list_playlists(ctx: actx, name):
+async def list_playlists(ctx: actx, name: str):
     path = 'playlists'
     filepath = f'playlists/{name}.lpl'
     # list all files
     if name == '':
         files = [f[:-4] for f in os.listdir(path) if f.endswith('.lpl')]
-        await dc.send_long(loc.playlists, '', [['>', i] for i in files], ctx)
+        await dc.send_long(loc.playlists, '', [['>', i] for i in files], ctx, ephemeral=True)
     # list specific playlist
     else:
         # if doesnt exist
         if not os.path.exists(filepath):
-            await ctx.send_response(dc.reactions.cross)
+            await ctx.send_response(dc.reactions.cross, ephemeral=True)
             return -1
         # if does exist
         else:
@@ -120,7 +120,7 @@ async def list_playlists(ctx: actx, name):
                     await ctx.send_response(loc.playlist_broken, ephemeral=True)
                     return -1
 
-            await dc.send_long(loc.playlist_content, name, [['>', i] for i in playlist], ctx)
+            await dc.send_long(loc.playlist_content, name, [['>', i] for i in playlist], ctx, ephemeral=True)
                 # await dc.send_long(str(songs), message.channel, title=f'Плейлист {name}:')
 
 def get_autocomplete(ctx) -> list[str]:
