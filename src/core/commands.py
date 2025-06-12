@@ -3,11 +3,10 @@ from discord.commands import Option
 from discord import ApplicationContext as actx
 from discord import SlashCommandGroup, Bot
 
+import views
 from core import handler
 from playback import player
 from network import dcHandler as dc
-import views
-import views.Queue
 from storage import db
 from storage import cacheHandler as cahe
 
@@ -31,7 +30,7 @@ class User(Cog):
         inst = handler.getInstance(ctx.guild_id, ctx.bot)
 
         await player.play(ctx, song, inst)
-        await ctx.send_response(dc.reactions.thumbs_up, view=views.Queue.View(), ephemeral=True)
+        await ctx.send_response(dc.reactions.thumbs_up, view=views.Queue(), ephemeral=True)
 
 
     @slash_command(
@@ -109,5 +108,5 @@ class Admin(Cog):
     @slash_command()
     async def test(self, ctx: actx):
         await db.create_cache()
-        await ctx.send_response(dc.reactions.fyou, view=views.Queue.View(), ephemeral=True)
+        await ctx.send_response(dc.reactions.fyou, view=views.Queue(), ephemeral=True)
 

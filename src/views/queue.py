@@ -1,6 +1,6 @@
 import discord
 
-class View(discord.ui.View):
+class Queue(discord.ui.View):
     # @discord.ui.
 
 
@@ -14,6 +14,3 @@ class View(discord.ui.View):
 
         # Make sure to update the message with our updated selves
         await interaction.response.edit_message(view=self)
-    
-
-Queue = View
