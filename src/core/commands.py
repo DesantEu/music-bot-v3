@@ -18,14 +18,14 @@ class User(Cog):
 
 
     @slash_command(
-            description="Я ХОЧУ СЛУХАТИ МУЗИКУ",
-            options=[
-                Option( 
-                    description="Назва або посилання", 
-                    name="song", 
-                    autocomplete=cahe.get_autocomplete
-                    ),
-                ], 
+        description="Я ХОЧУ СЛУХАТИ МУЗИКУ",
+        options=[
+            Option( 
+                description="Назва або посилання", 
+                name="song", 
+                autocomplete=cahe.get_autocomplete
+            ),
+        ], 
     )
     async def play(self, ctx: actx, song: str):
         inst = handler.getInstance(ctx.guild_id, ctx.bot)
@@ -35,7 +35,7 @@ class User(Cog):
 
 
     @slash_command(
-            description="Я НЕ ХОЧУ СЛУХАТИ МУЗИКУ"
+        description="Я НЕ ХОЧУ СЛУХАТИ МУЗИКУ"
     )
     async def stop(self, ctx: actx):
         inst = handler.getInstance(ctx.guild_id, ctx.bot)
@@ -55,16 +55,16 @@ class User(Cog):
 
 
     @playlist_group.command(
-            name="youtube", 
-            description="playlist by link"
+        name="youtube", 
+        description="playlist by link"
     )
     async def playlist(self, ctx: actx, link: str):
         await ctx.send_response(link, ephemeral=True)
 
 
     @playlist_group.command(
-            name="local", 
-            description="playlist by name"
+        name="local", 
+        description="playlist by name"
     )
     async def playlist_local(self, ctx: actx, name):
         await ctx.send_response(name, ephemeral=True)
