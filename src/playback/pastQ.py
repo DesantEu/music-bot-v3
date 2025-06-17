@@ -1,7 +1,6 @@
 import discord
 from locales import bot_locale as loc
 from network import dcHandler as dc
-from playback import playlists
 from playback import player
 
 def add_rmlist(inst, song_name: str):
@@ -41,13 +40,13 @@ async def send_past_queues(inst, ctx: discord.ApplicationContext):
         for j in inst.past_queues[i]:
             content.append(['> ', j.title])
 
-    await dc.send_long(loc.rmlist_title, loc.qq_smaller_title, content, ctx)
+    await dc.send_long(loc.rmlist_title, loc.qq_smaller_title, content, ctx, ephemeral=True)
 
 
 async def play_past_queue(index: int, inst, ctx: discord.ApplicationContext):
     # send notif
     content = [[f'{inst.queue.len()}. ', i.title] for i in inst.past_queues[index]]
-    await dc.send_long(loc.rmlist_title, loc.qq_smaller_title, content, ctx)
+    await dc.send_long(loc.rmlist_title, loc.qq_smaller_title, content, ctx, ephemeral=True)
 
     # add songs from past queue to current queue
     for i in inst.past_queues[index]:
