@@ -12,6 +12,8 @@ from storage import cacheHandler as cahe
 from playback import localPlaylists as lpl
 from locales import bot_locale as loc
 from playback import pastQ as past
+import os, json
+from asyncio import sleep
 
 
 class User(Cog):
@@ -351,6 +353,7 @@ class User(Cog):
         ]
     )
     async def playlist_local_check(self, ctx: actx, name: str):
+        await db.get_local_playlist_songs(ctx.guild_id, name)
         await lpl.list_playlists(ctx, name)
 
 
@@ -367,6 +370,12 @@ class Admin(Cog):
 
     @cache.command(name="transfer")
     async def cache_transfer(self, ctx: actx):
+        await db.drop_all()
+        await sleep(1)
+        await db.ensure_tables()
+        await sleep(1)
+        await db.track_guild(ctx.guild_id, ctx.guild.name)
+        
         for song in cahe.cache:
             s = cahe.cache[song]
             print(f"adding song: {s.title}")
@@ -378,7 +387,27 @@ class Admin(Cog):
             print(f"adding playlist: {p.title}")
             await db.add_playlist(p.link, p.title, p.searches)
 
+        path = 'playlists'
+        files = [f[:-4] for f in os.listdir(path) if f.endswith('.lpl')]
+        for name in files:
+            filepath = f'playlists/{name}.lpl'
+            with open(filepath, 'r', encoding='utf-8') as file:
+                print(f"PLAYLIST: {name}")
+                data: dict = json.loads(file.read())
+                songs = [data[s] for s in data.keys()]
+                real_songs = []
+                for i in range(len(songs)):
+                    if songs[i].startswith("ytsearch1:"):
+                        vid, song = await db.search_song(songs[i][songs[i].index(":")+1:])
+                        if not vid == '':
+                            real_songs.append(vid)
+                    elif "?v=" in songs[i]:
+                        real_songs.append(songs[i][songs[i].index("?v=")+3:])
+                print(real_songs)
+                await db.add_local_playlist(ctx.guild_id, name, real_songs)
+
         await ctx.send_response(dc.reactions.check, view=views.Queue(), ephemeral=True)
+
 
     @cache.command(name="search")
     async def cache_search(self, ctx: actx, query: str):
@@ -392,7 +421,7 @@ class Admin(Cog):
 
     @cache.command(name="create")
     async def cache_create_tables(self, ctx: actx):
-        await db.create_tables()
+        await db.ensure_tables()
         await ctx.send_response(dc.reactions.check, ephemeral=True)
 
 

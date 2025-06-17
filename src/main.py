@@ -12,7 +12,6 @@ async def on_ready():
     if not bot.user is None:
         print(f'{bot.user.name} is up and ready')
 
-        await db.init()
         await db.ensure_tables()
 
 

@@ -3,11 +3,7 @@ from mysql.connector.aio.abstracts import MySQLConnectionAbstract, MySQLCursorAb
 import os
 import traceback
 
-cnx: MySQLConnectionAbstract
-cursor: MySQLCursorAbstract
-
-async def init():
-    global cnx
+async def get_connection() -> MySQLConnectionAbstract:
     cnx = await connect(
         host="mysql",
         user="root",
@@ -15,15 +11,13 @@ async def init():
         connection_timeout=10000,
         database="discord"
     )
-    print(cnx)
+    return cnx
 
 # TODO: def is_table(name, cursor)
 
 async def ensure_tables():
-    global cnx
+    cnx = await get_connection()
     cursor = await cnx.cursor()
-
-
 
     # guild tracker
 
@@ -202,15 +196,11 @@ async def ensure_tables():
         print("table local_playlist_songs exists")
 
     await cursor.close()
-
-    # reset connection i guess
-    print("resetting connection...")
     await cnx.shutdown()
-    await init()
-    print("DB ready")
 
 
 async def drop_all():
+    cnx = await get_connection()
     cursor = await cnx.cursor()
 
     query = (
@@ -232,15 +222,11 @@ async def drop_all():
     print(f"{cursor.statement}: {res}")
 
     await cursor.close()
-
-    # reset connection i guess
-    print("resetting connection...")
     await cnx.shutdown()
-    await init()
-    print("DB ready")
 
 
 async def track_guild(guild_id: int, name: str):
+    cnx = await get_connection()
     cursor = await cnx.cursor()
 
     query = (
@@ -262,9 +248,11 @@ async def track_guild(guild_id: int, name: str):
         # print(f"{cursor.statement}: {res}")
 
     await cursor.close()
+    await cnx.shutdown()
 
 
 async def add_song(video_id: str, title:str, searches: list[str]):
+    cnx = await get_connection()
     cursor = await cnx.cursor()
 
     query = (
@@ -282,6 +270,7 @@ async def add_song(video_id: str, title:str, searches: list[str]):
         print(f"{cursor.statement}: {res}")
 
     await cursor.close()
+    await cnx.shutdown()
 
 
     for i in searches:
@@ -289,6 +278,7 @@ async def add_song(video_id: str, title:str, searches: list[str]):
 
 
 async def add_local_playlist(guild_id: int, playlist_name: str, songs: list[str]):
+    cnx = await get_connection()
     cursor = await cnx.cursor()
 
     query = (
@@ -305,22 +295,34 @@ async def add_local_playlist(guild_id: int, playlist_name: str, songs: list[str]
     data = {'g_id': guild_id, 'name': playlist_name}
 
     await cursor.execute(query, data)
+    await cnx.commit()
+    await cursor.close()
+    await cnx.shutdown()
 
     for song in songs:
+        cnx = await get_connection()
+        cursor = await cnx.cursor()
+
         query = (
             "SELECT id INTO @playlist_id FROM local_playlists WHERE name = %s;"
             "INSERT INTO local_playlist_songs (p_id, v_id)"
             "VALUES (@playlist_id, %s)"
         )
         data = (playlist_name, song)
-        print(f"inserting id {song}")
-        await cursor.execute(query, data)
+        try:
+            print(f"inserting id {song}")
+            await cursor.execute(query, data)
+            await cnx.commit()
+        except Exception:
+            traceback.print_exc()
+        finally:
+            await cursor.close()
+            await cnx.shutdown()
 
-    await cnx.commit()
-    await cursor.close()
 
 
 async def get_local_playlists(guild_id: int):
+    cnx = await get_connection()
     cursor = await cnx.cursor()
 
     query = (
@@ -334,11 +336,13 @@ async def get_local_playlists(guild_id: int):
     res = await cursor.fetchall()
     print(res)
     await cursor.close()
+    await cnx.shutdown()
 
     return res
 
 
 async def get_local_playlist_songs(guild_id, name: str):
+    cnx = await get_connection()
     cursor = await cnx.cursor()
 
     query = (
@@ -354,12 +358,15 @@ async def get_local_playlist_songs(guild_id, name: str):
     await cursor.execute(query, data)
     res = await cursor.fetchall()
     print(res)
+    
     await cursor.close()
+    await cnx.shutdown()
 
     return res
 
 
 async def add_search(query: str, video_id: str):
+    cnx = await get_connection()
     cursor = await cnx.cursor()
 
     sql_query = (
@@ -377,9 +384,11 @@ async def add_search(query: str, video_id: str):
         print(f"{cursor.statement}: {res}")
 
     await cursor.close()
+    await cnx.shutdown()
 
 
-async def search_song(query: str):
+async def search_song(query: str) -> tuple[str, str]:
+    cnx = await get_connection()
     cursor = await cnx.cursor()
     sql_query = (
         "SELECT songs.id, songs.title " # need to put spaces here
@@ -392,18 +401,24 @@ async def search_song(query: str):
     await cursor.execute(sql_query, data)
 
     res = await cursor.fetchall()
+    vid = ''
+    name = ''
+
     if len(res) > 0:
         vid, name = res[0]
         print(f"id: {vid}, title: {name}")
-        return vid, res
     else:
         print("failed to find")
 
     await cursor.close()
+    await cnx.shutdown()
+    
+    return str(vid), str(name)
     
 
 
 async def add_playlist(playlist_id: str, title:str, songs: list[str]):
+    cnx = await get_connection()
     cursor = await cnx.cursor()
     query = (
         "INSERT INTO playlists(id, title)"
@@ -424,7 +439,6 @@ async def add_playlist(playlist_id: str, title:str, songs: list[str]):
         data = (playlist_id, i)
         try:
             await cursor.execute(query, data)
-            # await cnx.commit()
         except Exception as e:
             print("EXCEPTION: " + str(e))
             res = await cursor.fetchall()
@@ -433,3 +447,4 @@ async def add_playlist(playlist_id: str, title:str, songs: list[str]):
 
     await cnx.commit()
     await cursor.close()
+    await cnx.shutdown()
