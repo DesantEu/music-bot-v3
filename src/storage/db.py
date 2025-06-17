@@ -1,6 +1,6 @@
 from mysql.connector.aio import connect
 from mysql.connector.aio.abstracts import MySQLConnectionAbstract, MySQLCursorAbstract
-import os, time, json
+import os
 
 cnx: MySQLConnectionAbstract
 cursor: MySQLCursorAbstract
