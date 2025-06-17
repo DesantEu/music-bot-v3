@@ -164,7 +164,7 @@ async def send(msg:str, ctx: actx, color=color_pink, ephemeral=False, respond=Tr
         return message.id
     return -1
 
-async def send_long(title:str, smaller_title:str, content:list[list[str]], ctx: actx, color=color_pink, ephemeral=False, respond=True):
+async def send_long(title:str, smaller_title:str, content:list[list[str]], ctx: actx, color=color_pink, ephemeral=False, respond=True) -> int:
     global long_messages
 
     msg = LongMessage(title, smaller_title, content)
