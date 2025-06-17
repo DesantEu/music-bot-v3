@@ -74,7 +74,7 @@ class Instance:
             song_title = f"{loc.now_playing} {self.current + 1}. {self.queue[self.current].title}"
         for i in self.queue_messages:
             asyncio.run_coroutine_threadsafe(dc.edit_long_smaller_title(i, song_title),
-                                             asyncio.get_running_loop())
+                                             self.bot.loop)
 
 
     def after_song(self, error):
