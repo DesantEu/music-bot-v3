@@ -13,6 +13,7 @@ async def on_ready():
         print(f'{bot.user.name} is up and ready')
 
         await db.init()
+        await db.ensure_tables()
 
 
 @bot.event
