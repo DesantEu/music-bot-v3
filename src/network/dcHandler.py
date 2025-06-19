@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord import ApplicationContext as actx
 from locales import bot_locale as loc
@@ -9,7 +10,7 @@ color_pink = discord.Colour.from_rgb(226, 195, 205)
 # color_pink_old = discord.Color.from_rgb(255, 166, 201)
 
 class LongMessage:
-    def __init__(self, title:str, smaller_title:str, content:list[list[str]], page=0):
+    def __init__(self, title:str, smaller_title:str, content:list[tuple[str, str]], page=0):
         self.page:int = page
         self.pages:list[str] = []
         self.title = title
@@ -130,7 +131,7 @@ class LongMessage:
     #         await self.message.clear_reaction(reactions.left_arrow)
     #         self.hasReactions = False
         
-    async def setContent(self, content:list[list[str]]):
+    async def setContent(self, content:list[tuple[str, str]]):
         self.content = content
         self.regenerate()
         await self.message.edit(embed=self.genEmbed())
@@ -164,7 +165,7 @@ async def send(msg:str, ctx: actx, color=color_pink, ephemeral=False, respond=Tr
         return message.id
     return -1
 
-async def send_long(title:str, smaller_title:str, content:list[list[str]], ctx: actx, color=color_pink, ephemeral=False, respond=True) -> int:
+async def send_long(title:str, smaller_title:str, content:list[tuple[str, str]], ctx: actx, color=color_pink, ephemeral=False, respond=True) -> int:
     global long_messages
 
     msg = LongMessage(title, smaller_title, content)
@@ -185,7 +186,7 @@ async def edit_long_both(id, index: int, status: str, text: str) -> int:
     await long_messages[id].edit(index, status=status, text=text)
     return 0
 
-async def edit_long_content(id, content:list[list]) -> int:
+async def edit_long_content(id, content:list[tuple[str, str]]) -> int:
     await long_messages[id].setContent(content)
     return 0
 
@@ -256,34 +257,15 @@ def isInVC(author):
     return type(author) == discord.Member and not author.voice is None
 
 
-async def join(ctx: actx, inst) -> int:
-    try:
-        # connect if not yet connected
-        if not inst.hasVC():
-            inst.vc = await ctx.user.voice.channel.connect()
-            return 0
-        # move to other channel maybe
-        if not inst.vc.channel == ctx.user.voice.channel:
-            await inst.vc.move_to(ctx.user.voice.channel)
-        return 0
-    except Exception as e:
-        print(f"exception caught: {e}")
-        return -1
-
-async def leave(inst) -> int:
-    try:
-        if not inst.hasVC:
-            return 1
-
-        inst.vc.cleanup()
-        await inst.vc.disconnect()
-        del(inst.vc)
-
-        return 0
-    except Exception as e:
-        print(f'exception leaving: {e}')
-
-        return -1
+async def check_cross(ctx: actx, res: bool):
+    if res:
+        await ctx.send_response(reactions.check, ephemeral=True)
+        await asyncio.sleep(1)
+        await ctx.interaction.delete_original_response()
+    else:
+        await ctx.send_response(reactions.cross, ephemeral=True)
+        await asyncio.sleep(5)
+        await ctx.interaction.delete_original_response()
 
 
 class reactions:
@@ -311,7 +293,12 @@ class reactions:
 
     left_arrow = '⬅️'
     right_arrow = '➡️'
+    down_arrow = '⬇️'
     play = '▶️'
+
+    internet = '🌐'
+    folder = '📁'
+    
     
 
 

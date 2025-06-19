@@ -1,29 +1,21 @@
 import discord
 from core import parser
 from locales import bot_locale as loc
-from core.instance import Instance
+from models.instance import Instance
 from network import dcHandler as dc
 import os
-from playback import player
 import os, sys, signal
 import atexit
-from storage import cacheHandler as cahe
-
-if not os.path.exists('testToken.txt'):
-    prefix = '//'
-    admin_prefix = '>'
-else:
-    prefix = '..'
-    admin_prefix = ','
+from discord import Bot
 
 
 admins = ['desantua']
 
 instances:dict[int, Instance] = {}
 
-def getInstance(gid: int, bot) -> Instance:
+def getInstance(gid: int, bot: Bot) -> Instance:
     if not gid in instances.keys():
-        instances[gid] = Instance(gid, prefix, bot)
+        instances[gid] = Instance(gid, bot)
 
     return instances[gid]
 
@@ -41,7 +33,6 @@ def handle_sigterm(signum, frame):
 def on_exit():
     pass
     instances.clear()
-    cahe.save_cache()
     
 
 signal.signal(signal.SIGTERM, handle_sigterm)

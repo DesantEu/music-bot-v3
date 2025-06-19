@@ -1,7 +1,7 @@
 import json
 from urllib.parse import parse_qs, urlparse
 import yt_dlp as yt
-from storage import cacheHandler as cahe
+# from storage import cacheHandler as cahe
 
 options = {
     'max_downloads' : 1
@@ -30,7 +30,7 @@ async def get_title(link:str):
     else:
         return -1
 
-def get_cache(prompt, is_link=False) -> cahe.CachedSong | None:
+def get_cache(prompt, is_link=False) -> tuple[str, str]:
     speciman = {}
 
     # get video data
@@ -45,24 +45,23 @@ def get_cache(prompt, is_link=False) -> cahe.CachedSong | None:
 
     # check that we have data
     if speciman == {}:
-        return None
+        return '', ''
 
     # profit
     title = speciman['title'].lower()
     title = title.encode().decode('unicode_escape').encode('latin1').decode('utf-8') # encoding fix
-    return cahe.CachedSong(speciman['id'],
-                           speciman['title'],
-                           [title] if is_link or prompt == title
-                           else [prompt, title])
+    return speciman['id'], speciman['title'],
 
-def get_playlist_cache(link) -> cahe.CachedSong | None:
+
+def get_playlist_cache(link) -> tuple[str, str, list[str]]:
+    """returns id, title, [song_ids]"""
     res = _dl.extract_info(link, download=False)
 
     if res:
-        return cahe.CachedSong(res['id'],
-                               res['title'],
-                               [i['id'] for i in res['entries']],
-                               is_playlist=True)
+        return res['id'], res['title'], [i['id'] for i in res['entries']]
+    else:
+        return '', '', []
+
 
 def get_mix_links(link, limit) -> list[str]:
     ydl_opts = {
@@ -80,7 +79,7 @@ def get_mix_links(link, limit) -> list[str]:
         return video_urls
 
 
-async def download(link, filename):
+def download(link, filename):
     #TODO: this is probably dumb
 
     options = {
@@ -129,4 +128,7 @@ def get_id_from_playlist_link(link: str) -> str:
 
 
 def remove_playlist_from_link(link: str) -> str:
-    return link[:link.find('&list=')]
+    if "&list=" in link:
+        return link[:link.find('&list=')]
+    else:
+        return link

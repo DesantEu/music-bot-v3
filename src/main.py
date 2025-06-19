@@ -22,7 +22,9 @@ async def on_voice_state_update(member, before, after):
 
 
 # add commands
-bot.add_cog(commands.User(bot))
+bot.add_cog(commands.Player(bot))
+bot.add_cog(commands.Playlist(bot))
+bot.add_cog(commands.Queue(bot))
 bot.add_cog(commands.Admin(bot))
 
 # db.init()
