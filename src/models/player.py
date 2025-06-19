@@ -72,6 +72,7 @@ class Player:
         #     return False
 
         self.state = PlayerStates.STOPPED
+        self.current = -1
         asyncio.create_task(PastQueue.add())
         self.queue.clear()
 
