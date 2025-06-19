@@ -63,7 +63,7 @@ class Song:
                 self.status = SongStatus.SEARCHING
                 vid, title = await asyncio.to_thread(yt.get_cache, search)
                 
-                await db.add_song(vid, title, [title.lower(), search])
+                await db.add_song(vid, title, [search])
                 return vid, title
             
         # link search
@@ -80,7 +80,7 @@ class Song:
             else:
                 self.status = SongStatus.SEARCHING
                 vid, title = await asyncio.to_thread(yt.get_cache, clean_link, is_link=True)
-                await db.add_song(vid, title, [title.lower()])
+                await db.add_song(vid, title, [])
                 return vid, title
         # we got empty somehow
         else:

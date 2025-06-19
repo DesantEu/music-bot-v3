@@ -114,13 +114,13 @@ async def get_song_autocomplete(query: str) -> list[str]:
     cursor = await cnx.cursor()
     mask = '%' + query + '%'
     sql_query = (
-        "SELECT songs.title "
+        "SELECT DISTINCT songs.title "
         "FROM searches "
         "JOIN songs ON searches.v_id = songs.id "
-        f"WHERE searches.query LIKE %s "
+        "WHERE searches.query LIKE %(mask)s OR songs.title LIKE %(mask)s"
         "LIMIT 10"
     )
-    data = (mask,)
+    data = {'mask': mask}
     print(f"searching {query}")
     await cursor.execute(sql_query, data)
 
