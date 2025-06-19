@@ -115,20 +115,20 @@ class Instance(Player):
             return False
 
 
-    async def leave(self) -> int:
+    async def leave(self) -> bool:
         try:
             if not self.has_vc():
-                return 1
+                return False
 
             self.vc.cleanup()
             await self.vc.disconnect()
             del(self.vc)
 
-            return 0
+            return True
         except Exception as e:
             print(f'exception leaving: {e}')
 
-            return -1
+            return False
 
 
     async def on_disconnect(self):

@@ -37,16 +37,9 @@ class Player(Cog):
     )
     async def stop(self, ctx: actx):
         inst = handler.getInstance(ctx.guild_id, ctx.bot)
-
-        if not inst.has_vc():
-            await ctx.respond(dc.reactions.fyou)
-            return
-        if inst.stop() and await inst.leave() == 0:
-            await inst.update_queue_embed()
-            inst.update_now_playing()
-            await ctx.respond(dc.reactions.wave)
-        else:
-            await ctx.respond(dc.reactions.cross)
+        res = inst.stop() and await inst.leave()
+        
+        await dc.check_cross(ctx, res)
 
 
     skip_group = SlashCommandGroup("skip")
@@ -75,7 +68,4 @@ class Player(Cog):
     async def skip_to(self, ctx: actx, target: str):
         inst = handler.getInstance(ctx.guild_id, ctx.bot)
         
-        if inst.skip(target):
-            await ctx.send_response(dc.reactions.check, ephemeral=True)
-        else:
-            await ctx.send_response(dc.reactions.cross, ephemeral=True)
+        await dc.check_cross(ctx, inst.skip(target))
