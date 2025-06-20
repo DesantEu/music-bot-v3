@@ -25,11 +25,9 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DB: discord
     volumes:
-      # - .:/app
       - bot_cache:/app/saves
       - bot_downloads:/app/songs
       - bot_playlists:/app/playlists
-    # command: python -u main.py
 
   mysql:
     image: mysql:9.3.0
@@ -46,7 +44,6 @@ services:
       PMA_HOST: mysql
       PMA_USER: root
       PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      # APACHE_LOG_DIR: /dev/null # shut up the logs
     labels:
       traefik.http.routers.phpmyadmin.rule: Host(`db.localhost`)
       traefik.http.services.phpmyadmin.loadbalancer.server.port: 80

@@ -6,9 +6,6 @@ COPY reqs.txt .
 RUN pip install -r reqs.txt
 
 # get ffmpeg
-# RUN apt-get update && \
-#     apt-get install -y ffmpeg && \
-#     rm -rf /var/lib/apt/lists/*
 RUN command -v ffmpeg >/dev/null || \
     apt-get update && \
     apt-get install -y ffmpeg && \
