@@ -40,6 +40,25 @@ class Playlist(Cog):
 
 
     @playlist_group.command(
+        name="save",
+        description="Зберегти чергу як плейліст",
+        options=[
+            Option(
+                description="Назва",
+                name="name"
+            )
+        ]
+    )
+    async def playlist_local_save(self, ctx: actx, name: str):
+        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+
+        # song_ids = [s.id for s in inst.queue]
+        res = await LocalPlaylist(name, ctx.guild_id, inst.queue.q).save()
+
+        await dc.check_cross(ctx, res)
+
+
+    @playlist_group.command(
         name="check", 
         description="Подивитись шо в плейлісті",
         options=[
