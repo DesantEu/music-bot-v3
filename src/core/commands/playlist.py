@@ -22,15 +22,7 @@ class Playlist(Cog):
 
 
     @playlist_group.command(
-        name="youtube", 
-        description="playlist by link"
-    )
-    async def playlist(self, ctx: actx, link: str):
-        await ctx.send_response("шо не работает?", ephemeral=True)
-
-
-    @playlist_group.command(
-        name="local", 
+        name="play", 
         description="Включити плейліст бота",
         options=[
             Option( 
@@ -42,15 +34,9 @@ class Playlist(Cog):
     )
     async def playlist_local_play(self, ctx: actx, name: str):
         inst = handler.getInstance(ctx.guild_id, ctx.bot)
-        playlist = LocalPlaylist(name, ctx.guild_id)
+        links = (await LocalPlaylist(name, ctx.guild_id).load()).get_links()
 
-        if not await playlist.load():
-            await ctx.send_response(dc.reactions.cross, ephemeral=True)
-
-        if await inst.play(ctx, playlist.song_ids):
-            await ctx.send_response(dc.reactions.check, ephemeral=True)
-        else:
-            await ctx.send_response(dc.reactions.cross, ephemeral=True)
+        await dc.check_cross(ctx, await inst.play(ctx, links))
 
 
     @playlist_group.command(
@@ -65,8 +51,22 @@ class Playlist(Cog):
         ]
     )
     async def playlist_local_check(self, ctx: actx, name: str):
-        # await db.get_local_playlist_songs(ctx.guild_id, name)
-        # await lpl.list_playlists(ctx, name)
-        await ctx.send_response(dc.reactions.cross, ephemeral=True)
+        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        content = (await LocalPlaylist(name, ctx.guild_id).load()).get_content()
+
+        if content == []:
+            await ctx.send_response(dc.reactions.cross, ephemeral=True)
+            return
+
+
+        await dc.send_long(name, loc.filler, content, ctx, ephemeral=True)
+
+
+    @playlist_group.command(
+        name="youtube", 
+        description="playlist by link"
+    )
+    async def playlist_youtube(self, ctx: actx, link: str):
+        await ctx.send_response("шо не работает?", ephemeral=True)
 
 

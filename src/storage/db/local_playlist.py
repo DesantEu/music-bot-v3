@@ -66,7 +66,7 @@ async def get_local_playlists(guild_id: int):
     return res
 
 
-async def get_local_playlist_songs(guild_id, name: str) -> list[str]:
+async def get_local_playlist_songs(guild_id, name: str) -> list[tuple[str, str]]:
     cnx = await get_connection()
     cursor = await cnx.cursor()
 
@@ -87,21 +87,24 @@ async def get_local_playlist_songs(guild_id, name: str) -> list[str]:
     await cursor.close()
     await cnx.shutdown()
 
-    if len(res > 0):
-        return res[0]
+    if len(res) > 0:
+        return res
     else:
         return []
 
 
-async def get_lpl_autocomplete(query: str) -> list[str]:
+async def get_lpl_autocomplete(query: str, guild_id: int) -> list[str]:
     cnx = await get_connection()
     cursor = await cnx.cursor()
+    mask = '%' + query + '%'
     sql_query = (
         "SELECT name "
         "FROM local_playlists "
-        "WHERE name LIKE %s;"
+        "WHERE name LIKE %s "
+        "AND g_id = %s "
+        "LIMIT 10"
     )
-    data = (query,)
+    data = (mask, guild_id)
     print(f"searching {query}")
     await cursor.execute(sql_query, data)
 
@@ -109,7 +112,7 @@ async def get_lpl_autocomplete(query: str) -> list[str]:
     titles = []
 
     if len(res) > 0:
-        titles = res[0]
+        titles = [r[0] for r in res] # flatten
         print(titles)
     else:
         print("failed to find")

@@ -13,42 +13,53 @@ class SongStatus(Enum):
     FAILED = -1
 
 class Song:
-    def __init__(self, link: str='', search: str='' , ctx: actx | None = None):
-        self.id: str
-        self.title: str
+    def __init__(self, title: str, id: str):
+        self.id: str = id
+        self.title: str = title
         self.status: SongStatus = SongStatus.SEARCHING_LOCAL
-        silent = ctx is actx
 
+
+    @classmethod
+    def search(cls, link: str='', query: str='' ) -> 'Song':
         # placeholder title
-        if not search == '':
-            self.title = search
+        if not query == '':
+            title = query
         elif not link == '':
-            self.title = link
+            title = link
         else:
-            self.title = "???"
+            title = "???"
+        inst = cls(title, '')
 
         # async grab info
-        asyncio.create_task(self.__ensure_song(link, search, silent))
+        if not link == '' or not query == '':
+            asyncio.create_task(inst.__ensure_song(link, query))
 
+        return inst
     
-    async def __ensure_song(self, link: str, search: str, silent: bool):
+
+    @classmethod
+    def from_info(cls, title: str, id: str) -> 'Song':
+        inst = cls(title, id)
+
+        return inst
+    
+
+    async def __ensure_song(self, link: str, search: str):
         # get title, id
-        self.id, self.title = await self.__find_info(link, search, silent)
+        self.id, self.title = await self.__find_info(link, search)
 
         if self.id == '':
             self.status = SongStatus.FAILED
             return
         
         # download
-        downloaded = await self.__ensure_file()
-        if not downloaded:
+        if await self.__ensure_file():
+            self.status = SongStatus.READY
+        else:
             self.status = SongStatus.FAILED
-            return
-
-        self.status = SongStatus.READY
 
 
-    async def __find_info(self, link: str, search: str, silent: bool) -> tuple[str, str]:
+    async def __find_info(self, link: str, search: str) -> tuple[str, str]:
         # title search:
         if not search == '':
 
@@ -69,11 +80,11 @@ class Song:
         # link search
         elif not link == '':
             # db lookup
-            vid = yt.remove_playlist_from_link(link)
-            clean_link = yt.get_id_from_link(vid)
+            clean_link = yt.remove_playlist_from_link(link)
+            vid = yt.get_id_from_link(clean_link)
             vid, title = await db.search_id(vid)
             
-            if not vid == '':
+            if not title == '':
                 return vid, title
             
             # yt lookup
@@ -87,26 +98,18 @@ class Song:
             return '', ''
 
 
-        # if not search == '':
-        #     # vid, title = await db.search_song(search)
-        #     if vid == '' or title == '':
-        #         self.status = SongStatus.SEARCHING
-        #         # TODO: YT lookup and download
-        #     else:
-        #         self.title = title
-        #         self.id = vid
-        #         self.status = SongStatus.READY
-
-
     async def __ensure_file(self) -> bool:
         filename = f'songs/{self.id}.mp3'
-        if not os.path.exists(filename):
-            self.status = SongStatus.DOWNLOADING
-            full_link = 'https://www.youtube.com/watch?v=' + self.id
+        if os.path.exists(filename):
+            return True
+        
+        self.status = SongStatus.DOWNLOADING
+        full_link = 'https://www.youtube.com/watch?v=' + self.id
+        res = await asyncio.to_thread(yt.download, full_link, filename)
 
-            res = await asyncio.to_thread(yt.download, full_link, filename)
-            if not res == 0:
-                return False
+        if not res == 0:
+            self.status = SongStatus.FAILED
+            return False
             
         return True
 

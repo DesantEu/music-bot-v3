@@ -1,26 +1,48 @@
+from typing import Self
 from storage import db
+from models.song import Song
 
 
 class LocalPlaylist:
     def __init__(self, name: str, gid: int, song_ids: list[str] = []):
         self.title: str = name
-        self.song_ids: list[str] = song_ids
+        self.songs: list[Song] = []
         self.gid = gid
 
 
+    def get_content(self) -> list[tuple[str, str]]:
+        content = []
+
+        for i in range(len(self.songs)):
+            content.append((f"{i}. ", self.songs[i].title))
+
+        return content
+    
+
+    def get_links(self) -> list[str]:
+        return ["https://www.youtube.com/watch?v=" + i.id for i in self.songs]
+    
+
+    def get_ids(self) -> list[str]:
+        return [i.id for i in self.songs]
+
+
     async def save(self) -> bool:
-        if self.song_ids == []:
+        ids = self.get_ids()
+        if ids == []:
             return False
         
-        await db.add_local_playlist(self.gid, self.title, self.song_ids)
+        await db.add_local_playlist(self.gid, self.title, ids)
 
         return True
 
 
-    async def load(self) -> bool:
-        self.song_ids = await db.get_local_playlist_songs(self.gid, self.title)
+    async def load(self) -> Self:
+        song_info = await db.get_local_playlist_songs(self.gid, self.title)
+        for id, title in song_info:
+            self.songs.append(Song.from_info(title, id))
 
-        return not self.song_ids == []
+        return self
 
 
 # async def play_playlist(ctx: actx, name, inst) -> int:

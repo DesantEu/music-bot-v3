@@ -59,9 +59,9 @@ async def search_song(query: str) -> tuple[str, str]:
         "SELECT songs.id, songs.title " # need to put spaces here
         "FROM searches "
         "JOIN songs ON searches.v_id = songs.id "
-        "WHERE searches.query = %s;"
+        "WHERE searches.query = %(query)s OR songs.title = %(query)s"
     )
-    data = (query,)
+    data = {'query': query}
     print(f"searching {query}")
     await cursor.execute(sql_query, data)
 
@@ -116,11 +116,11 @@ async def get_song_autocomplete(query: str) -> list[str]:
     sql_query = (
         "SELECT DISTINCT songs.title "
         "FROM searches "
-        "JOIN songs ON searches.v_id = songs.id "
-        "WHERE searches.query LIKE %(mask)s OR songs.title LIKE %(mask)s"
+        "JOIN songs ON songs.id = searches.v_id "
+        "WHERE searches.query LIKE %(mask)s OR songs.title LIKE %(mask)s OR songs.id = %(query)s"
         "LIMIT 10"
     )
-    data = {'mask': mask}
+    data = {'mask': mask, 'query': query}
     print(f"searching {query}")
     await cursor.execute(sql_query, data)
 

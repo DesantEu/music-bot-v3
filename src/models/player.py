@@ -40,14 +40,16 @@ class Player:
                 return False
             
             if "https://" in prompt:
-                self.queue.append(Song(link=prompt))
+                self.queue.append(Song.search(link=prompt))
             else:
-                self.queue.append(Song(search=prompt))
+                self.queue.append(Song.search(query=prompt))
 
             return True
         else:
-            print(type(prompt))
-            raise NotImplemented
+            for song in prompt:
+                await self.play(ctx, song)
+                
+            return True
 
 
     def resume(self) -> bool:
@@ -73,7 +75,7 @@ class Player:
 
         self.state = PlayerStates.STOPPED
         self.current = -1
-        asyncio.create_task(PastQueue.add())
+        # asyncio.create_task(PastQueue.add())
         self.queue.clear()
 
         return had_vc
