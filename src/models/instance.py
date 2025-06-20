@@ -21,7 +21,7 @@ class Instance(Player):
         print(f"created instance {self.guildid}")
 
 
-    async def play(self, ctx: actx, prompt: str | list[str]):
+    async def play(self, ctx: actx, prompt: str | list[str]) -> bool:
         if not dc.isInVC(ctx.user):
             return False
         await self.join(ctx)
@@ -52,20 +52,19 @@ class Instance(Player):
     
 
     async def track_queue(self):
-        while True:
+        # wait for ready
+        while not all(song.status == SongStatus.READY for song in self.queue):
             if not self.queue_message == -1:
                 await self.update_queue_embed()
-            
-            ready = all(song.status == SongStatus.READY
-                        for song in self.queue)
-            if ready:
-                if self.current == -1:
-                    while not self.has_vc():
-                        await asyncio.sleep(0.2)
-                    self.play_from_queue(0)
-                break
-
             await asyncio.sleep(1)
+            
+        # on ready:
+        await self.update_queue_embed()
+        # start playing
+        if self.current == -1:
+            while not self.has_vc():
+                await asyncio.sleep(0.2)
+            self.play_from_queue(0)
 
 
     async def update_queue_embed(self):
