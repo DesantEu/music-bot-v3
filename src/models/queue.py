@@ -60,7 +60,7 @@ class Queue:
             elif song.status == SongStatus.SEARCHING_LOCAL:
                 status = dc.reactions.folder
             elif song.status == SongStatus.SEARCHING:
-                status = dc.reactions.internet
+                status = dc.reactions.search
             elif song.status == SongStatus.FAILED:
                 status = dc.reactions.cross
             elif song.status == SongStatus.DOWNLOADING:

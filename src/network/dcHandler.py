@@ -297,6 +297,7 @@ class reactions:
     play = '▶️'
 
     internet = '🌐'
+    search = '🔍'
     folder = '📁'
     
     
