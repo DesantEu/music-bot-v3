@@ -1,3 +1,4 @@
+import asyncio
 import os, json
 from asyncio import sleep
 
@@ -173,7 +174,7 @@ class Queue(Cog):
         # reverse and delete from end cuz indeces change and shit
         indeces = sorted(indeces, reverse=True)
         current_reduce = 0
-        skip_later = inst.current in indeces
+        skip_later = inst.current + 1 in indeces
 
         for i in indeces:
             if i <= inst.current:
@@ -220,12 +221,19 @@ class Queue(Cog):
 
         if not inst.has_vc() or inst.queue.len() == 0:
             await ctx.send_response(dc.reactions.fyou, ephemeral=True)
+            await asyncio.sleep(5)
+            await ctx.interaction.delete_original_response()
             return
 
         if inst.stop():
             inst.update_now_playing()
             await inst.update_queue_embed()
+            
             await ctx.send_response(dc.reactions.check, ephemeral=True)
+            await asyncio.sleep(1)
+            await ctx.interaction.delete_original_response()
 
         else:
             await ctx.send_response(dc.reactions.cross, ephemeral=True)
+            await asyncio.sleep(5)
+            await ctx.interaction.delete_original_response()
