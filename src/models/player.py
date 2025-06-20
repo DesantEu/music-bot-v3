@@ -61,6 +61,41 @@ class Player:
         self.state = PlayerStates.PAUSED
         return True
     
+    def remove(self, query: str) -> bool:
+        if self.queue.len() == 0 or not self.has_vc():
+            return False
+        
+        success = False
+        indeces = self.__parse_remove(query)
+        current_reduce = 0
+        skip_later = self.current + 1 in indeces
+
+        # reduce self.current if we remove anything before it
+        for i in indeces:
+            if i <= self.current + 1:
+                current_reduce += 1
+
+            # idk???
+            res = self.queue.pop(str(i))
+            if not res == '':
+                # stop if queue is empty
+                if self.queue.len() == 0:
+                    self.stop()
+                success = True
+
+        self.current -= current_reduce
+
+        # move to a song before and skip to the one after it
+        # if we removed what was playing ATM
+        if skip_later:
+            # self.current -= 1
+            self.skip()
+        else:
+            self.update_now_playing()
+
+        return success
+
+    
 
     def stop(self) -> bool:
         had_vc = False
@@ -70,8 +105,6 @@ class Player:
             had_vc = True
             self.skipSkip = True
             self.vc.stop()
-        # else:
-        #     return False
 
         self.state = PlayerStates.STOPPED
         self.current = -1
@@ -134,6 +167,76 @@ class Player:
         raise Exception("NOT OVERRIDDEN (vc)")
 
 
+    def __parse_remove(self, query: str) -> list[int]:
+        removes = query.split(' ')
+        max = self.queue.len()
+
+        # do unreasonable transformations so you can bulk remove better
+        # get deletion indeces from whatever garbage the user gives
+        indeces = []
+
+        for i in removes:
+            # ignore negatives from spawn
+            if i.startswith('-'):
+                continue
+
+            # handle ranges
+            if '-' in i:
+                start = -1
+                end = -1
+
+                splits = i.split('-')
+
+                # safety measures
+                # idk how that could happen but anyway
+                if len(splits) == 1:
+                    continue
+                # only pick (1-25)-123
+                try:
+                    start = int(splits[0])
+                    end = int(splits[1])
+                    if end > max:
+                        end = max
+                # if letters are thrown in the sequence
+                except:
+                    continue
+
+                # yea this would happen somehow
+                if end < start:
+                    continue
+
+                for ind in range(start, end+1):
+                    if ind > max:
+                        continue
+
+                    if not ind in indeces:
+                        indeces.append(ind)
+
+            # handle single numbers
+            else:
+                # parse int of course
+                try:
+                    ind = int(i)
+                    if ind > max:
+                        continue
+
+                    if not i in indeces:
+                        indeces.append(ind)
+                # letters detected here
+                except:
+                    continue
+
+        # ensure they are unique
+        temp = []
+        for i in indeces:
+            if not i in temp:
+                temp.append(i)
+        indeces = temp
+
+        # reverse and delete from end cuz indeces change and shit
+        indeces = sorted(indeces, reverse=True)
+        return indeces
+
 
     def __after_song(self, error):
         if error:
@@ -151,44 +254,3 @@ class Player:
             self.skipSkip = False
             return
         self.skip(afterSong=True)
-
-
-
-# async def play(ctx: actx, prompt:str, inst):
-#     # handle empty prompts
-#     if prompt == '' and not inst.isPaused:
-#         await ctx.send_response(dc.reactions.fyou, ephemeral=True)
-#         return
-
-#     # check if the user is in a vc
-#     if not dc.isInVC(ctx.author):
-#         await ctx.send_response(loc.no_vc, ephemeral=True)
-#         return -1
-
-
-#     isSuccessful = -1
-
-#     # handle links
-#     if prompt.startswith('https://'):
-#         # handle playlists
-#         if 'list=' in prompt:
-#             # isSuccessful = await cahe.find_link_play(ctx, yt.remove_playlist_from_link(prompt), inst)
-
-#         # handle a single song
-#         else:
-#             isSuccessful = await cahe.find_link_play(ctx, prompt, inst)
-#     # handle text search
-#     else:
-#         isSuccessful = await cahe.find_prompt_play(ctx, prompt, inst)
-
-#     if not isSuccessful == 0:
-#         return -1
-
-#     # check vc again just to be sure
-#     if not dc.isInVC(ctx.author):
-#         await ctx.send_followup(loc.left_vc, ephemeral=True)
-#         return -1
-#     else:
-#         await dc.join(ctx, inst)
-#         if not inst.isPlaying:
-#             play_from_queue(0, inst) # TODO: remove
