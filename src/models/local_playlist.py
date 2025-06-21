@@ -4,9 +4,9 @@ from models.song import Song
 
 
 class LocalPlaylist:
-    def __init__(self, name: str, gid: int, songs: list[Song] = []):
+    def __init__(self, name: str, gid: int, songs: list[Song] | None = None):
         self.title: str = name
-        self.songs: list[Song] = songs
+        self.songs: list[Song] = songs if songs is not None else []
         self.gid = gid
 
 
