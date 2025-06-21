@@ -24,18 +24,18 @@ async def add_local_playlist(guild_id: int, playlist_name: str, songs: list[str]
     await cursor.close()
     await cnx.shutdown()
 
-    for song in songs:
+    for i in range(len(songs)):
         cnx = await get_connection()
         cursor = await cnx.cursor()
 
         query = (
             "SELECT id INTO @playlist_id FROM local_playlists WHERE name = %s;"
-            "INSERT INTO local_playlist_songs (p_id, v_id)"
-            "VALUES (@playlist_id, %s)"
+            "INSERT INTO local_playlist_songs (p_id, v_id, ind)"
+            "VALUES (@playlist_id, %s, %s)"
         )
-        data = (playlist_name, song)
+        data = (playlist_name, songs[i], i)
         try:
-            print(f"inserting id {song}")
+            print(f"inserting id {songs[i]}")
             await cursor.execute(query, data)
             await cnx.commit()
         except Exception:
@@ -77,6 +77,7 @@ async def get_local_playlist_songs(guild_id, name: str) -> list[tuple[str, str]]
         "JOIN songs ON songs.id = local_playlist_songs.v_id "
         "WHERE local_playlists.name = %s "
         "AND local_playlists.g_id = %s "
+        "ORDER BY local_playlist_songs.ind ASC"
     )
     data = (name, guild_id)
 
@@ -121,3 +122,73 @@ async def get_lpl_autocomplete(query: str, guild_id: int) -> list[str]:
     await cnx.shutdown()
     
     return titles
+
+
+async def lpl_create():
+    cnx = await get_connection()
+    cursor = await cnx.cursor()
+    check = (
+        "SHOW TABLES LIKE 'local_playlists';"
+    )
+
+    await cursor.execute(check)
+    res = await cursor.fetchall()
+
+    if res == []:
+        query = (
+            "CREATE TABLE local_playlists ("
+            "id   INT AUTO_INCREMENT PRIMARY KEY,"
+            "name VARCHAR(255) UNIQUE,"
+            "g_id  BIGINT UNSIGNED,"
+            "FOREIGN KEY (g_id) REFERENCES guilds(id)"
+            ");"
+            )
+        await cursor.execute(query)
+
+        res = await cursor.fetchall()
+        print(f"{cursor.statement}: {res}")
+    else:
+        print("table local_playlists exists")
+
+
+    check = (
+        "SHOW TABLES LIKE 'local_playlist_songs';"
+    )
+
+    await cursor.execute(check)
+    res = await cursor.fetchall()
+
+    if res == []:
+        query = (
+            "CREATE TABLE local_playlist_songs ("
+            "p_id  INT,"
+            "v_id  VARCHAR(255),"
+            "ind INT,"
+            "PRIMARY KEY (p_id, v_id)," 
+            "FOREIGN KEY (v_id) REFERENCES songs(id),"
+            "FOREIGN KEY (p_id) REFERENCES local_playlists(id)"
+            ");"
+            )
+        await cursor.execute(query)
+
+        res = await cursor.fetchall()
+        print(f"{cursor.statement}: {res}")
+    else:
+        print("table local_playlist_songs exists")
+
+    await cursor.close()
+    await cnx.shutdown()
+
+
+async def lpl_drop():
+    cnx = await get_connection()
+    cursor = await cnx.cursor()
+    query = (
+        "SET FOREIGN_KEY_CHECKS = 0;"
+
+        "DROP TABLE local_playlists;"
+        "DROP TABLE local_playlist_songs;"
+        
+        "SET FOREIGN_KEY_CHECKS = 1;"
+    )
+    await cursor.execute(query)
