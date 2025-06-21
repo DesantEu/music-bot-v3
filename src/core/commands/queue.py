@@ -26,7 +26,7 @@ class Queue(Cog):
         description="Я ХОЧУ ВЗНАТИ ШО ГРАЄ"
     )
     async def queue(self, ctx: actx):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
 
         if not await inst.send_queue(ctx) == -1:
             await ctx.send_response(dc.reactions.check, ephemeral=True)
@@ -34,18 +34,15 @@ class Queue(Cog):
 
     past_group = SlashCommandGroup("past")
 
+
     @past_group.command(
-        name="list",
+        name="check",
         description="Показує попередні черги"
     )
     async def past_list(self, ctx: actx):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
-        content = await PastQueue.get_as_content(ctx.guild_id)
+        inst = handler.getInstance(ctx)
 
-        if content == []:
-            await ctx.send_response(dc.reactions.fyou, ephemeral=True)
-            return
-        
+        content = await PastQueue(ctx.guild_id).get_content()
         await dc.send_long(loc.rmlist_title, loc.qq_smaller_title, content, ctx, ephemeral=True)
 
 
@@ -55,20 +52,16 @@ class Queue(Cog):
         options=[
             Option(
                 scot.integer,
-                description="Цифру брати з /past list",
+                description="Цифру брати з /past check",
                 name="number"
             )
         ]
     )
     async def past_play(self, ctx: actx, index: int):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
-        await ctx.send_response(dc.reactions.fyou, ephemeral=True)
+        inst = handler.getInstance(ctx)
+        pq = (await PastQueue(ctx.guild_id).load(index)).get_links()
 
-        # if index < 1 or index > len(inst.past_queues):
-        #     await ctx.send_response(dc.reactions.fyou, ephemeral=True)
-        #     return
-
-        # await past.play_past_queue(index-1, inst, ctx)
+        await dc.check_cross(ctx, await inst.play(ctx, pq))
 
 
     @slash_command(
@@ -81,17 +74,17 @@ class Queue(Cog):
         ]
     )
     async def remove(self, ctx: actx, query: str):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
 
-        await inst.update_queue_embed()
         await dc.check_cross(ctx, inst.remove(query))
+        await inst.update_queue_embed()
 
 
     @slash_command(
         description="Я ХОЧУ ОЧИСТИТИ МУЗИКУ"
     )
     async def clear(self, ctx: actx):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
 
         if not inst.has_vc() or inst.queue.len() == 0:
             await ctx.send_response(dc.reactions.fyou, ephemeral=True)

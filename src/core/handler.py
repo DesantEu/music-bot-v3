@@ -1,21 +1,25 @@
-import discord
-from core import parser
+import asyncio
 from locales import bot_locale as loc
 from models.instance import Instance
 from network import dcHandler as dc
 import os
-import os, sys, signal
-import atexit
-from discord import Bot
+from storage import db
+from discord import ApplicationContext as actx
 
 
 admins = ['desantua']
 
 instances:dict[int, Instance] = {}
 
-def getInstance(gid: int, bot: Bot) -> Instance:
+def getInstance(ctx: actx) -> Instance:
+    gid = ctx.guild_id
+    bot = ctx.bot
+
     if not gid in instances.keys():
         instances[gid] = Instance(gid, bot)
+        if ctx.guild is not None:
+            asyncio.create_task(db.track_guild(ctx.guild_id, ctx.guild.name))
+
 
     return instances[gid]
 
@@ -25,16 +29,7 @@ async def handle_voice(member, before, after):
         await instances[member.guild.id].on_disconnect()
 
 
-def handle_sigterm(signum, frame):
-    # on_exit()
-    sys.exit(0)
-
-
-def on_exit():
-    pass
+async def on_exit():
+    for i in instances.values():
+        await i.save()
     instances.clear()
-    
-
-signal.signal(signal.SIGTERM, handle_sigterm)
-signal.signal(signal.SIGINT, handle_sigterm)
-atexit.register(on_exit)

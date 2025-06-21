@@ -193,6 +193,65 @@ async def ensure_tables():
     else:
         print("table local_playlist_songs exists")
 
+
+    # past queues
+
+
+    check = (
+        "SHOW TABLES LIKE 'past_queues';"
+    )
+
+    await cursor.execute(check)
+    res = await cursor.fetchall()
+
+    if res == []:
+        query = (
+            "CREATE TABLE past_queues ("
+            "id     INT AUTO_INCREMENT PRIMARY KEY,"
+            "ind    INT,"
+            "g_id   BIGINT UNSIGNED,"
+            "UNIQUE (g_id, ind),"
+            "FOREIGN KEY (g_id) REFERENCES guilds(id)"
+            ");"
+            )
+        await cursor.execute(query)
+
+        res = await cursor.fetchall()
+        print(f"{cursor.statement}: {res}")
+    else:
+        print("table past_queues exists")
+
+
+    # past queue songs
+
+
+    check = (
+        "SHOW TABLES LIKE 'past_queue_songs';"
+    )
+
+    await cursor.execute(check)
+    res = await cursor.fetchall()
+
+    if res == []:
+        query = (
+            "CREATE TABLE past_queue_songs ("
+            "q_id   INT,"
+            "s_id   VARCHAR(255),"
+            "ind    INT,"
+            "PRIMARY KEY (q_id, ind),"
+            "FOREIGN KEY (q_id) REFERENCES past_queues(id) ON DELETE CASCADE,"
+            "FOREIGN KEY (s_id) REFERENCES songs(id)"
+            ");"
+            )
+        await cursor.execute(query)
+
+        res = await cursor.fetchall()
+        print(f"{cursor.statement}: {res}")
+    else:
+        print("table local_playlist_songs exists")
+
+
+
     await cursor.close()
     await cnx.shutdown()
 

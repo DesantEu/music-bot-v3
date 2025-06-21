@@ -1,5 +1,6 @@
 import discord
 import asyncio
+from models.past_queue import PastQueue
 from models.player import Player
 from models.song import SongStatus
 from network import dcHandler as dc
@@ -139,13 +140,13 @@ class Instance(Player):
         print('got kicked, leaving')
 
     
+    async def save(self):
+        print(f"saving instance {self.guildid}", flush=True)
+        await PastQueue(self.guildid, self.queue.q).save()
 
 
 
     def __del__(self):
         print(f"destroying instance for {self.guildid}")
-        self.stop()
-        asyncio.run(self.leave())
-        # TODO: save session
 
 

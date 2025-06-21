@@ -26,6 +26,7 @@ class Player:
         self.volume = 1.0
 
         self.vc: discord.VoiceClient
+        self.guildid: int
         self.state = PlayerStates.STOPPED
 
 
@@ -108,7 +109,7 @@ class Player:
 
         self.state = PlayerStates.STOPPED
         self.current = -1
-        # asyncio.create_task(PastQueue.add())
+        asyncio.create_task(PastQueue(self.guildid, self.queue.q).save())
         self.queue.clear()
 
         return had_vc

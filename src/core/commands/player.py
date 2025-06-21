@@ -27,7 +27,7 @@ class Player(Cog):
         ], 
     )
     async def play(self, ctx: actx, song: str):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
 
         await dc.check_cross(ctx, await inst.play(ctx, song))
 
@@ -36,7 +36,7 @@ class Player(Cog):
         description="Я НЕ ХОЧУ СЛУХАТИ МУЗИКУ"
     )
     async def stop(self, ctx: actx):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
         res = inst.stop() and await inst.leave()
         
         await dc.check_cross(ctx, res)
@@ -47,7 +47,7 @@ class Player(Cog):
         description="Скіпнути один трек",
     )
     async def skip_one(self, ctx: actx):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
 
         await dc.check_cross(ctx, inst.skip())
 
@@ -63,6 +63,6 @@ class Player(Cog):
         ], 
     )
     async def skip_to(self, ctx: actx, target: str):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
         
         await dc.check_cross(ctx, inst.skip(target))

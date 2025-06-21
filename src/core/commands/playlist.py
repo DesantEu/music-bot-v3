@@ -33,7 +33,7 @@ class Playlist(Cog):
         ]
     )
     async def playlist_local_play(self, ctx: actx, name: str):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
         links = (await LocalPlaylist(name, ctx.guild_id).load()).get_links()
 
         await dc.check_cross(ctx, await inst.play(ctx, links))
@@ -50,7 +50,7 @@ class Playlist(Cog):
         ]
     )
     async def playlist_local_save(self, ctx: actx, name: str):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
 
         # song_ids = [s.id for s in inst.queue]
         res = await LocalPlaylist(name, ctx.guild_id, inst.queue.q).save()
@@ -70,7 +70,7 @@ class Playlist(Cog):
         ]
     )
     async def playlist_local_check(self, ctx: actx, name: str):
-        inst = handler.getInstance(ctx.guild_id, ctx.bot)
+        inst = handler.getInstance(ctx)
         content = (await LocalPlaylist(name, ctx.guild_id).load()).get_content()
 
         if content == []:

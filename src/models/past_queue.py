@@ -1,76 +1,47 @@
+from typing import Self
 import discord
 from locales import bot_locale as loc
 from network import dcHandler as dc
+from models.song import Song
+from storage import db
 
 class PastQueue:
-    @staticmethod
-    async def add():
-        pass
+    def __init__(self, guild_id: int, songs: list[Song] | None = None):
+        self.gid = guild_id
+        self.songs: list[Song] = songs if songs is not None else []
 
-    @staticmethod
-    async def get(gid: int) -> list[str]:
-        return []
+
+    async def load(self, index: int) -> Self:
+        res = await db.past_queue_get(self.gid, index)
+        for vid, title in res:
+            self.songs.append(Song.from_info(title, vid))
+        return self
     
-    @staticmethod
-    async def get_as_content(gid: int) -> list[list]:
-        return []
+    async def get_content(self) -> list[tuple[str, str]]:
+        content: list[tuple[str, str]] = []
+        data = await db.past_queue_get_all(self.gid)
 
-# def add_rmlist(inst, song_name: str):
-#     inst.rmlist.append(song_name)
-#     if len(inst.rmlist) > 50:
-#         inst.rmlist.pop(0)
+        for i in data.keys():
+            content.append((f"{i}.", ' '))
 
-# async def send_rmlist(inst, ctx: discord.ApplicationContext):
-#     if len(inst.rmlist) == 0:
-#         await ctx.send_response(dc.reactions.fyou, ephemeral=True)
-#         return
+            for _, (_, title) in enumerate(data[i]):
+                content.append(('> ', title))
 
-#     content = []
-
-#     for i in inst.rmlist:
-#         content.append(['>', i])
+        return content
     
-#     await dc.send_long(loc.rmlist_title, loc.rmlist_smaller_title, content, ctx)
 
-# def add_past_queue(inst):
-#     if inst.queue.len() == 0:
-#         return
-
-#     inst.past_queues.insert(0, inst.queue.copy())
-#     if len(inst.past_queues) > 10:
-#         _ = inst.past_queues.pop(-1)
+    def get_ids(self) -> list[str]:
+        return [i.id for i in self.songs]
 
 
-# async def send_past_queues(inst, ctx: discord.ApplicationContext):
-#     if len(inst.past_queues) == 0:
-#         await ctx.send_response(dc.reactions.fyou, ephemeral=True)
-#         return
-
-#     content = []
-#     for i in range(len(inst.past_queues)):
-#         content.append([f'{i+1}. ', ' '])
-#         for j in inst.past_queues[i]:
-#             content.append(['> ', j.title])
-
-#     await dc.send_long(loc.rmlist_title, loc.qq_smaller_title, content, ctx, ephemeral=True)
+    def get_links(self) -> list[str]:
+        return ["https://www.youtube.com/watch?v=" + i.id for i in self.songs]
 
 
-# async def play_past_queue(index: int, inst, ctx: discord.ApplicationContext):
-#     # send notif
-#     content = [[f'{inst.queue.len()}. ', i.title] for i in inst.past_queues[index]]
-#     await dc.send_long(loc.rmlist_title, loc.qq_smaller_title, content, ctx, ephemeral=True)
-
-#     # add songs from past queue to current queue
-#     for i in inst.past_queues[index]:
-#         inst.queue.append(i.link, i.title)
-
-#     await inst.update_queue()
-
-#     # if nothing is playing we should start playing i guess
-#     if not dc.isInVC(ctx.user):
-#         await ctx.send_response(loc.left_vc, ephemeral=True)
-#         return -1
-#     else:
-#         await dc.join(ctx, inst)
-#         if not inst.isPlaying:
-#             player.play_from_queue(0, inst) # TODO: remove
+    async def save(self) -> bool:
+        ids = self.get_ids()
+        if ids == []:
+            return False
+        
+        return await db.past_queue_save(self.gid, ids)
+    

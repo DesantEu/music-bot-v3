@@ -1,3 +1,4 @@
+import asyncio
 import os
 import discord
 from core import commands
@@ -32,4 +33,10 @@ bot.add_cog(commands.Admin(bot))
 
 # token = os.environ["DISCORD_TEST_TOKEN"]
 token = os.environ["DISCORD_TOKEN"]
-bot.run(token)
+try:
+    bot.run(token)
+except Exception as e:
+    print(e)
+finally:
+    asyncio.run(handler.on_exit())
+    

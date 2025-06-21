@@ -17,6 +17,8 @@ services:
       watch:
         - path: ./src
           action: rebuild
+    depends_on:
+      - mysql
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       DISCORD_TEST_TOKEN: ${DISCORD_TEST_TOKEN}

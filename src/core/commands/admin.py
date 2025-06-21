@@ -4,10 +4,12 @@ from discord.commands import Option
 from discord import ApplicationContext as actx
 from discord import SlashCommandGroup, SlashCommandOptionType as scot, Bot
 
+from models.past_queue import PastQueue
 import views, os, json
 from network import dcHandler as dc, ytHandler as yt
 from locales import bot_locale as loc
 from storage import db
+from core import handler
 
 
 class Admin(Cog):
@@ -61,4 +63,15 @@ class Admin(Cog):
     async def test(self, ctx: actx):
         # await db.create_cache()
         await ctx.send_response(dc.reactions.fyou, view=views.Queue(), ephemeral=True)
+
+
+    past = SlashCommandGroup("admin_past", "admin bs", checks=[is_owner()])
+
+    @past.command(name="save", description="force save current queue")
+    async def past_save(self, ctx:actx):
+        inst = handler.getInstance(ctx)
+
+        pq = PastQueue(ctx.guild_id, inst.queue.q)
+
+        await dc.check_cross(ctx, await pq.save())
 
