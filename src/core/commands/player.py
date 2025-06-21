@@ -42,11 +42,8 @@ class Player(Cog):
         await dc.check_cross(ctx, res)
 
 
-    skip_group = SlashCommandGroup("skip")
-
-
-    @skip_group.command(
-        name="one",
+    @slash_command(
+        name="skip",
         description="Скіпнути один трек",
     )
     async def skip_one(self, ctx: actx):
@@ -55,8 +52,8 @@ class Player(Cog):
         await dc.check_cross(ctx, inst.skip())
 
 
-    @skip_group.command(
-        name="to",
+    @slash_command(
+        name="goto",
         description="Скіпнути по номеру",
         options=[
             Option( 
