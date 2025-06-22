@@ -1,16 +1,10 @@
 import json, asyncio, os
 from typing import Any
-from enum import Enum
 from storage import db
 from discord import ApplicationContext as actx
 from network import ytHandler as yt
+from models.enums import SongStatus
 
-class SongStatus(Enum):
-    READY = 0
-    SEARCHING = 1
-    SEARCHING_LOCAL = 2
-    DOWNLOADING = 3
-    FAILED = -1
 
 class Song:
     def __init__(self, title: str, id: str):

@@ -26,3 +26,26 @@ async def track_guild(guild_id: int, name: str):
 
     await cursor.close()
     await cnx.shutdown()
+
+async def get_guild_ids() -> list[int]:
+    cnx = await get_connection()
+    cursor = await cnx.cursor()
+
+    query = (
+        "SELECT id FROM guilds;"
+    )
+
+    await cursor.execute(query)
+    res = await cursor.fetchall()
+
+    await cursor.close()
+    await cnx.shutdown()
+
+
+    if len(res) > 0:
+        res = [i[0] for i in res] # flatten
+        print(f"gids: {res}")
+        return res
+    else:
+        print("failed to find")
+    return []

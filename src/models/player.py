@@ -2,17 +2,12 @@ import asyncio
 import discord
 from discord import ApplicationContext as actx
 from network import dcHandler as dc
-from datetime import datetime
+from datetime import datetime, timedelta
 from .queue import Queue
 from .song import Song
 from .past_queue import PastQueue
-from enum import Enum
+from .enums import PlayerStates
 
-
-class PlayerStates(Enum):
-    PLAYING = 1
-    PAUSED = 0
-    STOPPED = -1
 
 class Player:
     def __init__(self) -> None:
@@ -30,14 +25,14 @@ class Player:
         self.state = PlayerStates.STOPPED
 
 
-    async def play(self, ctx: actx, prompt: str | list[str]) -> bool:
+    async def play(self, ctx: actx | None, prompt: str | list[str]) -> bool:
         if type(prompt) is str:
             # handle empty prompts
             if prompt == '' and not self.state == PlayerStates.PAUSED:
                 return False
 
             # check if the user is in a vc
-            if not dc.isInVC(ctx.author):
+            if ctx is not None and not dc.isInVC(ctx.author):
                 return False
             
             if "https://" in prompt:
@@ -149,14 +144,29 @@ class Player:
         self.play_from_queue(next)
         return True
     
-    def play_from_queue(self, index: int):
+
+    def play_from_queue(self, index: int, start: str = "00:00:00"):
+        print("called play from queue")
         v_id = self.queue[index].id
         file = f'songs/{v_id}.mp3'
 
-        self.vc.play(discord.FFmpegPCMAudio(file), after=self.__after_song)
+        self.vc.play(discord.FFmpegPCMAudio(file, before_options=f"-ss {start}", options='-f s16le')
+                     , after=self.__after_song)
+        h, m, s = map(int, start.split(":"))
+        delta = timedelta(hours=h, minutes=m, seconds=s)
+        
+        self.song_start_time = datetime.now() - delta
         self.current = index
         self.update_now_playing() # hopefully this works
         self.resume()
+
+
+    def get_delta(self, time: datetime) -> str:
+        delta = datetime.now() - time
+        total = int(delta.total_seconds())
+        h, rem = divmod(total, 3600)
+        m, s = divmod(rem, 60)
+        return f"{h:02}:{m:02}:{s:02}"
 
     
     def update_now_playing(self):

@@ -41,6 +41,42 @@ async def ensure_tables():
         print("table guilds exists")
 
 
+    # savestates
+
+
+    check = (
+        "SHOW TABLES LIKE 'savestates';"
+    )
+
+    await cursor.execute(check)
+    res = await cursor.fetchall()
+
+    if res == []:
+        query = (
+            "CREATE TABLE savestates ("
+            "g_id       BIGINT UNSIGNED PRIMARY KEY,"
+            "state      INT NOT NULL,"
+            "current    INT NULL,"
+            "song_time  TIME NULL,"
+            "vc_id      BIGINT UNSIGNED NULL,"
+            "qm_id      BIGINT UNSIGNED NULL,"
+            "qc_id      BIGINT UNSIGNED NULL,"
+            "saved_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+
+            "CONSTRAINT fk_savestates_guild "
+            "FOREIGN KEY (g_id) "
+            "REFERENCES guilds(id) "
+            "ON DELETE CASCADE "
+            "); "
+            ) 
+        await cursor.execute(query)
+
+        res = await cursor.fetchall()
+        print(f"{cursor.statement}: {res}")
+    else:
+        print("table savestates exists")
+
+
     # songs
 
     check = (

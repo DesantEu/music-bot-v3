@@ -4,7 +4,7 @@ from models.instance import Instance
 from network import dcHandler as dc
 import os
 from storage import db
-from discord import ApplicationContext as actx
+from discord import ApplicationContext as actx, Bot
 
 
 admins = ['desantua']
@@ -27,6 +27,14 @@ def getInstance(ctx: actx) -> Instance:
 async def handle_voice(member, before, after):
     if not dc.isInVC(member):
         await instances[member.guild.id].on_disconnect()
+
+
+async def restore_instances(bot: Bot):
+    gids = await db.get_guild_ids()
+
+    for gid in gids:
+        instances[gid] = Instance(gid, bot)
+        await instances[gid].restore()
 
 
 async def on_exit():

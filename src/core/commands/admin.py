@@ -65,13 +65,19 @@ class Admin(Cog):
         await ctx.send_response(dc.reactions.fyou, view=views.Queue(), ephemeral=True)
 
 
-    past = SlashCommandGroup("admin_past", "admin bs", checks=[is_owner()])
+    admin = SlashCommandGroup("admin", "admin bs", checks=[is_owner()])
 
-    @past.command(name="save", description="force save current queue")
+    @admin.command(name="save_past", description="force save current queue")
     async def past_save(self, ctx:actx):
         inst = handler.getInstance(ctx)
 
         pq = PastQueue(ctx.guild_id, inst.queue.q)
 
         await dc.check_cross(ctx, await pq.save())
+
+
+    @admin.command(name="save_state", description="force save current state")
+    async def save_state(self, ctx):
+        inst = handler.getInstance(ctx)
+        await dc.check_cross(ctx, await inst.save())
 

@@ -5,8 +5,11 @@ from core import commands
 from core import handler
 from storage import db
 
+intents = discord.Intents.default()
+intents.members = True
 
-bot = discord.Bot()
+
+bot = discord.Bot(intents=intents)
 
 @bot.event
 async def on_ready():
@@ -14,6 +17,7 @@ async def on_ready():
         print(f'{bot.user.name} is up and ready')
 
         await db.ensure_tables()
+        await handler.restore_instances(bot)
 
 
 @bot.event
