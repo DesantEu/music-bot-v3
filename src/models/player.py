@@ -145,16 +145,19 @@ class Player:
         return True
     
 
-    def play_from_queue(self, index: int, start: str = "00:00:00"):
+    def play_from_queue(self, index: int, start: str | timedelta = "00:00:00"):
         print("called play from queue")
         v_id = self.queue[index].id
         file = f'songs/{v_id}.mp3'
 
         self.vc.play(discord.FFmpegPCMAudio(file, before_options=f"-ss {start}", options='-f s16le')
                      , after=self.__after_song)
-        h, m, s = map(int, start.split(":"))
-        delta = timedelta(hours=h, minutes=m, seconds=s)
-        
+        if not isinstance(start, timedelta):
+            h, m, s = map(int, start.split(":"))
+            delta = timedelta(hours=h, minutes=m, seconds=s)
+        else:
+            delta = start
+
         self.song_start_time = datetime.now() - delta
         self.current = index
         self.update_now_playing() # hopefully this works
