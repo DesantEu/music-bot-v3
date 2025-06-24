@@ -19,8 +19,6 @@ class Instance(Player):
         self.queue_tracker = None
 
         self.bot = bot
-        # self.vc: discord.VoiceClient
-        # TODO: load session
 
         print(f"created instance {self.guildid}")
 
@@ -147,17 +145,26 @@ class Instance(Player):
     
     async def save(self) -> bool:
         print(f"saving instance {self.guildid}", flush=True)
+        # save time
+        checkpoint = self.get_delta(self.song_start_time)
+
+        # save the queue
         await PastQueue(self.guildid, self.queue.q).save()
-        song_time = '00:00:00'
-        if not self.state == PlayerStates.STOPPED:
-            song_time = self.get_delta(self.song_start_time)
+
+        # if we are saving a stopped bot (if the bot was stopped and shut down)
+        # only update status, leave state tha save
+        # this makes it only so the bot doesnt rejoin
+        if self.state == PlayerStates.STOPPED:
+            print(f"{self.guildid}: saving stopped state")
+            await db.update_state(self.guildid, self.state)
+            return True
+
         # ensure we do have a vc
+        vc_id = 0
         if self.has_vc() \
         and (type(self.vc.channel) is discord.channel.VoiceChannel \
         or type(self.vc.channel) is discord.channel.StageChannel):
             vc_id = int(self.vc.channel.id)
-        else:
-            vc_id = 0
 
         # ensure we do have a queue message in a channel
         qc_id = 0
@@ -167,60 +174,68 @@ class Instance(Player):
             if type(message) is discord.Message:
                 qc_id = message.channel.id
 
-        return await db.save_state(self.guildid, self.state, self.current, song_time, vc_id, self.queue_message, qc_id)
+        return await db.save_state(self.guildid, self.state, self.current, checkpoint, vc_id, self.queue_message, qc_id)
 
 
-    async def restore(self):
+    async def restore(self) -> bool:
         print(f"restoring session for {self.guildid}")
+
         res = await db.get_state(self.guildid)
         if res is None:
             return False
-        # spread data
+        print(f"{self.guildid}: got state")
+        
         state, current, song_time, vc_id, qm_id, qc_id = res
-        print(f"state: {state}, current: {current}, song_time: {song_time}, vc_id: {vc_id}, qm_id: {qm_id}, qc_id: {qc_id}")
-
-
-
-        print("looking for guild")
         guild = self.bot.get_guild(self.guildid)
-        if guild is not None:
-            # try restore queue message
-            if qc_id > 0:
-                print("looking for queue")
-                qm_channel = guild.get_channel(qc_id)
-                if type(qm_channel) is discord.TextChannel:
-                    self.queue_message = qm_id
-                    dc.long_messages[qm_id] = dc.LongMessage(loc.queue, '...', self.queue.toContent())
-                    dc.long_messages[qm_id].message = await qm_channel.fetch_message(qm_id)
-                    print("restored queue message")
-            # if we were stopped no need to restore more
-            if not state == PlayerStates.STOPPED:
-                # try restore vc
-                print("looking for channel")
-                vcs = guild.voice_channels
-                channel = next((c for c in vcs if c.id == vc_id), None)
-                if channel is not None:
-                    print(f"checking if channel is empty {channel.name} {channel.members}")
-                    if len(channel.members) > 0:
-                        print("connecting")
-                        # load songs if theres someone in the vc
-                        self.vc = await channel.connect()
-                        print("getting last queue")
-                        songs = (await PastQueue(self.guildid).load(1)).get_links()
-                        print("adding songs")
-                        await self.play(None, songs)
+        if guild is None:
+            return False
+        print(f"{self.guildid}: got guild")
+        
+        # try restore queue message
+        if qc_id > 0:
+            qm_channel = guild.get_channel(qc_id) # need channel
+            if type(qm_channel) is discord.TextChannel:
+                # create placeholder long message
+                print(f"{self.guildid}: creating queue message")
+                self.queue_message = qm_id
+                dc.long_messages[qm_id] = dc.LongMessage(loc.queue, '...', self.queue.toContent())
+                dc.long_messages[qm_id].message = await qm_channel.fetch_message(qm_id)
+                print(f"{self.guildid}: done")
 
-                        # wait for songs ready
-                        while self.queue_tracker is None or not self.queue_tracker.done():
-                            print("waiting")
-                            await asyncio.sleep(0.5)
+        
+        # if we were stopped no need to restore more
+        if not state == PlayerStates.STOPPED: # TODO: change to current -1 or something similar to restore from stopped
+            return True
+        
+        # try restore vc
+        print(f"{self.guildid}: restoring vc")
+        channel = next((c for c in guild.voice_channels if c.id == vc_id), None)
+        if channel is not None and len(channel.members) > 0:
+            # load songs if theres someone in the vc
+            self.vc = await channel.connect()
+            print(f"{self.guildid}: connected")
 
-                        print(f"resuming song #{current + 1} at {song_time}")
-                        # play old current
-                        self.skipSkip = True
-                        self.vc.stop()
-                        self.play_from_queue(current, song_time)
-                        self.state = state
+            print(f"{self.guildid}: getting songs")
+            songs = (await PastQueue(self.guildid).load(1)).get_links()
+            print(f"{self.guildid}: done")
+            await self.play(None, songs)
+            print(f"{self.guildid}: added songs")
+
+
+            # wait for songs ready
+            while self.queue_tracker is None or not self.queue_tracker.done():
+                print(f"{self.guildid}: songs lookup...")
+
+                await asyncio.sleep(0.5)
+
+            # play old current
+            print(f"{self.guildid}: resuming")
+            self.skipSkip = True
+            self.vc.stop()
+            self.play_from_queue(current, song_time)
+            self.state = state
+
+        return True
 
 
     def __del__(self):

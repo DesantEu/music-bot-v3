@@ -18,10 +18,7 @@ async def save_state(guild_id: int, state: PlayerStates, current: int, song_time
         "qc_id = %(qc_id)s,"
         "saved_at = CURRENT_TIMESTAMP"
     )
-    if state == PlayerStates.STOPPED:
-        data = {'g_id':guild_id, 'state': int(state), 'current':None, 'song_time': None, 'vc_id':None, 'qm_id': q_msg_id, 'qc_id': qc_id }
-    else:
-        data = {'g_id':guild_id, 'state': int(state), 'current':current, 'song_time': song_time, 'vc_id':vc_id, 'qm_id': q_msg_id, 'qc_id': qc_id }
+    data = {'g_id':guild_id, 'state': int(state), 'current':current, 'song_time': song_time, 'vc_id':vc_id, 'qm_id': q_msg_id, 'qc_id': qc_id }
 
     try:
         print(f"saving state for: {guild_id}")
@@ -42,6 +39,32 @@ async def save_state(guild_id: int, state: PlayerStates, current: int, song_time
         await cursor.close()
         await cnx.shutdown()
         return res
+    
+
+async def update_state(guild_id: int, status: PlayerStates):
+    cnx = await get_connection()
+    cursor = await cnx.cursor()
+    
+    query = (
+        "INSERT INTO savestates (g_id, state) "
+        "VALUES (%(g_id)s, %(state)s) "
+        "ON DUPLICATE KEY UPDATE "
+        "state = %(state)s,"
+        "saved_at = CURRENT_TIMESTAMP"
+    )
+    data = {'g_id': guild_id, 'state': int(status)}
+    try:
+        print(f"updating state for: {guild_id} to {status}")
+        await cursor.execute(query, data)
+        await cnx.commit()
+        print(f"{cursor.statement}: {await cursor.fetchall()}")
+    except Exception:
+        traceback.print_exc()
+        print(cursor.statement)
+        await cnx.rollback()
+    finally:
+        await cursor.close()
+        await cnx.shutdown()
 
 
 async def get_state(guild_id: int) -> tuple[PlayerStates, int, str, int, int, int] | None:
