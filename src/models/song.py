@@ -101,7 +101,7 @@ class Song:
         full_link = 'https://www.youtube.com/watch?v=' + self.id
         res = await asyncio.to_thread(yt.download, full_link, filename)
 
-        if not res == 0:
+        if not res:
             self.status = SongStatus.FAILED
             return False
             

@@ -1,12 +1,15 @@
 import json
+from time import sleep
 from urllib.parse import parse_qs, urlparse
 import yt_dlp as yt
+from models.enums import SongStatus
 # from storage import cacheHandler as cahe
 
 options = {
     'max_downloads' : 1
 }
 _dl = yt.YoutubeDL(options)
+downloads: dict[str, SongStatus] = {}
 
 
 async def get_title(link:str):
@@ -79,8 +82,18 @@ def get_mix_links(link, limit) -> list[str]:
         return video_urls
 
 
-def download(link, filename):
-    #TODO: this is probably dumb
+def download(link, filename) -> bool:
+    # skip dupes
+    dupe = False
+    while link in downloads.keys() and downloads[link] == SongStatus.DOWNLOADING:
+        dupe = True
+        print(f"waiting for {link}")
+        sleep(1)
+    if dupe:
+        return True if downloads[link] == SongStatus.READY else False
+
+    # track downloads to avoid dupes
+    downloads[link] = SongStatus.DOWNLOADING
 
     options = {
         'format': 'bestaudio/best',
@@ -92,9 +105,12 @@ def download(link, filename):
         with(yt.YoutubeDL(options)) as ydl:
             ydl.download([link])
     except:
-        return -1
+        downloads[link] = SongStatus.FAILED
+        return False
 
-    return 0
+    downloads[link] = SongStatus.READY
+    print(f"returning success {link}")
+    return True
 
 
 def get_id_from_link(link: str) -> str:
