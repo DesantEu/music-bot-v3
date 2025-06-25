@@ -57,7 +57,7 @@ class Player:
         self.state = PlayerStates.PAUSED
         return True
     
-    async def remove(self, query: str) -> bool:
+    async def remove(self, query: str, ctx: actx) -> bool:
         if self.queue.len() == 0 or not self.has_vc():
             return False
         
@@ -76,7 +76,7 @@ class Player:
             if not res == '':
                 # stop if queue is empty
                 if self.queue.len() == 0:
-                    await self.stop()
+                    await self.stop(f"{ctx.author.display_name} видалив все з черги")
                 success = True
 
         self.current -= current_reduce
@@ -93,12 +93,13 @@ class Player:
 
     
 
-    async def stop(self) -> bool:
+    async def stop(self, kick_blame: str | None = None) -> bool:
         """ Stops the player, clears the queue and leaves the voice channel if it was connected.
         Gets called pretty much any time the bot is expected to stop playing music.
         (dc, stop, clear, etc.)
         Returns True if the player was connected to a voice channel, False otherwise.
         """
+        self.kick_blame = kick_blame
         had_vc = False
         # stop and leave vc
         if self.has_vc():

@@ -24,6 +24,7 @@ class Instance(Player):
         self._update_title_task:    asyncio.Task | None = None
         self._save_task:            asyncio.Task | None = None
         self._restore_task:         asyncio.Task | None = None
+        self.kick_blame: str | None = None
 
         self.bot = bot
 
@@ -139,7 +140,7 @@ class Instance(Player):
 
     def __get_now_playing(self) -> str:
         if self.queue.len() == 0:
-            song_title = "..."
+            song_title = "..." if self.kick_blame is None else self.kick_blame
         else:
             if self.current == -1:
                 song_title = "ща ща ща"
@@ -164,10 +165,12 @@ class Instance(Player):
             # connect if not yet connected
             if not self.has_vc():
                 self.vc = await channel.connect()
+                self.kick_blame = None
                 return True
             # move to other channel maybe
             if not self.vc.channel == channel:
                 await self.vc.move_to(channel)
+                self.kick_blame = None
             return True
         except Exception as e:
             print(f"exception caught: {e}")
@@ -191,7 +194,7 @@ class Instance(Player):
 
 
     async def on_disconnect(self):
-        await self.stop()
+        await self.stop("Мене хтось кікнув")
         await self.leave()
         if not self.queue_message == -1:
             self.update_now_playing()

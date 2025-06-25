@@ -76,7 +76,7 @@ class Queue(Cog):
     async def remove(self, ctx: actx, query: str):
         inst = handler.getInstance(ctx)
 
-        await dc.check_cross(ctx, await inst.remove(query))
+        await dc.check_cross(ctx, await inst.remove(query, ctx))
         await inst.update_queue_embed()
 
 
@@ -92,7 +92,7 @@ class Queue(Cog):
             await ctx.interaction.delete_original_response()
             return
 
-        if await inst.stop():
+        if await inst.stop(f"{ctx.author.display_name} очистив чергу") and await inst.leave():
             inst.update_now_playing()
             await inst.update_queue_embed()
             
