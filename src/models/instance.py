@@ -205,12 +205,22 @@ class Instance(Player):
     async def restore(self) -> bool:
         print(f"restoring session for {self.guildid}")
 
+        # get state
         res = await db.get_state(self.guildid)
         if res is None:
             return False
         print(f"{self.guildid}: got state")
         
+        # unpack
         state, current, song_time, vc_id, qm_id, qc_id = res
+        # guilds that have used commands but never saved can have nulls all over this
+        # we dont want that
+        if not all(i is not None for i in [state, current, song_time, vc_id, qm_id, qc_id]):
+            print(f"{self.guildid}: incomplete state, restoring stopped")
+            self.state = PlayerStates.STOPPED
+            return True
+        
+        # get this instances guild
         guild = self.bot.get_guild(self.guildid)
         if guild is None:
             return False
@@ -229,7 +239,7 @@ class Instance(Player):
 
         
         # if we were stopped no need to restore more
-        if not state == PlayerStates.STOPPED: # TODO: change to current -1 or something similar to restore from stopped
+        if state == PlayerStates.STOPPED:
             return True
         
         # try restore vc

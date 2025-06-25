@@ -94,6 +94,12 @@ class Player:
     
 
     def stop(self) -> bool:
+        """ Stops the player, clears the queue and leaves the voice channel if it was connected.
+        Gets called pretty much any time the bot is expected to stop playing music.
+        (dc, stop, clear, etc.)
+        Returns True if the player was connected to a voice channel, False otherwise.
+        """
+        asyncio.create_task(self.save())
         had_vc = False
         # stop and leave vc
         if self.has_vc():
@@ -104,7 +110,6 @@ class Player:
 
         self.state = PlayerStates.STOPPED
         self.current = -1
-        asyncio.create_task(PastQueue(self.guildid, self.queue.q).save())
         self.queue.clear()
 
         return had_vc
@@ -175,6 +180,9 @@ class Player:
     def update_now_playing(self):
         raise Exception("NOT OVERRIDDEN (update)")
 
+
+    async def save(self) -> bool:
+        raise Exception("NOT OVERRIDDEN (save)")
 
     def has_vc(self) -> bool:
         # return False
