@@ -16,10 +16,13 @@ class Instance(Player):
         super().__init__()
         self.guildid: int = gid
         self.queue_message: int = 0
+        """0 by default, means no queue message"""
         self.queue_tracker = None
 
-        self._update_content_task: asyncio.Task | None = None
-        self._update_title_task: asyncio.Task | None = None
+        self._update_content_task:  asyncio.Task | None = None
+        self._update_title_task:    asyncio.Task | None = None
+        self._save_task:            asyncio.Task | None = None
+        self._restore_task:         asyncio.Task | None = None
 
         self.bot = bot
 
@@ -46,7 +49,7 @@ class Instance(Player):
 
 
     async def send_queue(self, ctx: actx | None) -> int:
-        if self.queue.len() == 0 or ctx is None:
+        if ctx is None:
             return -1
 
         song_title = self.__get_now_playing()
@@ -75,38 +78,54 @@ class Instance(Player):
 
 
     async def update_queue_embed(self):
+        print(f"updating queue embed for {self.guildid}")
         # cancel old task 
         if self._update_content_task is not None and not self._update_content_task.done():
             self._update_content_task.cancel()
+            print(f"canceled old update task for {self.guildid}")
 
-        self._update_content_task = asyncio.create_task(self._update_queue_embed_now())
+        self._update_content_task = asyncio.create_task(
+            self._update_queue_embed_now()
+        )
         
 
     async def _update_queue_embed_now(self):
-        await asyncio.sleep(0.5)  # debounce time
+        print(f"debouncing update for {self.guildid}")
+        await asyncio.sleep(0.3)  # debounce time
 
         content = self.queue.toContent()
         old = dc.long_messages[self.queue_message].content
 
         if content == old:
             return
+        print(f"content changed for {self.guildid}, updating")
         
         await dc.edit_long_content(self.queue_message, content)
-            
 
 
     def update_now_playing(self):
-        song_title = self.__get_now_playing()
-
-        if song_title == dc.long_messages[self.queue_message].title:
-            return
         # if we have a task running, cancel it
         if self._update_title_task is not None and not self._update_title_task.done():
             self._update_title_task.cancel()
+            print(f"canceled old title update task for {self.guildid}")
 
-        asyncio.run_coroutine_threadsafe(
-            dc.edit_long_smaller_title(self.queue_message, song_title),
-            self.bot.loop)
+        self._update_title_task = self.bot.loop.create_task(
+            self._update_title_now()
+        )
+
+
+    async def _update_title_now(self):
+        print(f"debouncing title update for {self.guildid}")
+        await asyncio.sleep(0.3)
+
+        song_title = self.__get_now_playing()
+        old_title = dc.long_messages[self.queue_message].smaller_title
+
+        if song_title == old_title:
+            return
+        print(f"title changed for {self.guildid}, updating")
+
+        await dc.edit_long_smaller_title(self.queue_message, song_title)
         
 
     def has_vc(self) -> bool:
@@ -128,15 +147,26 @@ class Instance(Player):
         return song_title
 
 
-    async def join(self, ctx: actx) -> bool:
+    async def join(self, ctx: actx | discord.VoiceChannel) -> bool:
+        # grab channel
+        channel: discord.VoiceChannel
+        if type(ctx) is actx:
+            channel = ctx.user.voice.channel
+        elif type(ctx) is discord.VoiceChannel:
+            channel = ctx
+        else:
+            print(f"join called with {type(ctx)}")
+            return False
+
+
         try:
             # connect if not yet connected
             if not self.has_vc():
-                self.vc = await ctx.user.voice.channel.connect()
+                self.vc = await channel.connect()
                 return True
             # move to other channel maybe
-            if not self.vc.channel == ctx.user.voice.channel:
-                await self.vc.move_to(ctx.user.voice.channel)
+            if not self.vc.channel == channel:
+                await self.vc.move_to(channel)
             return True
         except Exception as e:
             print(f"exception caught: {e}")
@@ -160,7 +190,7 @@ class Instance(Player):
 
 
     async def on_disconnect(self):
-        self.stop()
+        await self.stop()
         await self.leave()
         if not self.queue_message == -1:
             self.update_now_playing()
@@ -202,7 +232,28 @@ class Instance(Player):
         return await db.save_state(self.guildid, self.state, self.current, checkpoint, vc_id, self.queue_message, qc_id)
 
 
-    async def restore(self) -> bool:
+    async def restore(self, force_join = False) -> bool:
+        """ Restores the player state from the database.
+        If force_join is True, it will restore the player even if it was stopped.
+        Returns True if the player was restored successfully, False otherwise.
+        """
+        # if we have a task running, cancel it
+        if self._restore_task is not None and not self._restore_task.done():
+            self._restore_task.cancel()
+            print(f"canceled old restore task for {self.guildid}")
+
+        self._restore_task = asyncio.create_task(
+            self._restore_now(force_join)
+        )
+        
+        return True
+    
+
+
+    async def _restore_now(self, force_join = False) -> bool:
+        # debounce
+        await asyncio.sleep(0.3)
+        
         print(f"restoring session for {self.guildid}")
 
         # get state
@@ -217,7 +268,6 @@ class Instance(Player):
         # we dont want that
         if not all(i is not None for i in [state, current, song_time, vc_id, qm_id, qc_id]):
             print(f"{self.guildid}: incomplete state, restoring stopped")
-            self.state = PlayerStates.STOPPED
             return True
         
         # get this instances guild
@@ -227,19 +277,24 @@ class Instance(Player):
         print(f"{self.guildid}: got guild")
         
         # try restore queue message
-        if qc_id > 0:
-            qm_channel = guild.get_channel(qc_id) # need channel
-            if type(qm_channel) is discord.TextChannel:
-                # create placeholder long message
-                print(f"{self.guildid}: creating queue message")
-                self.queue_message = qm_id
-                dc.long_messages[qm_id] = dc.LongMessage(loc.queue, '...', self.queue.toContent())
-                dc.long_messages[qm_id].message = await qm_channel.fetch_message(qm_id)
-                print(f"{self.guildid}: done")
+        try:
+            if qc_id > 0:
+                qm_channel = guild.get_channel(qc_id) # need channel
+                if type(qm_channel) is discord.TextChannel:
+                    # create placeholder long message
+                    print(f"{self.guildid}: creating queue message")
+                    self.queue_message = qm_id
+                    dc.long_messages[qm_id] = dc.LongMessage(loc.queue, '...', self.queue.toContent())
+                    dc.long_messages[qm_id].message = await qm_channel.fetch_message(qm_id)
+                    print(f"{self.guildid}: done")
+        except Exception as e:
+            print(f"{self.guildid}: queue message likely deleted")
+            self.queue_message = 0
+            return False
 
         
         # if we were stopped no need to restore more
-        if state == PlayerStates.STOPPED:
+        if state == PlayerStates.STOPPED and not force_join:
             return True
         
         # try restore vc
@@ -247,7 +302,7 @@ class Instance(Player):
         channel = next((c for c in guild.voice_channels if c.id == vc_id), None)
         if channel is not None and len(channel.members) > 0:
             # load songs if theres someone in the vc
-            self.vc = await channel.connect()
+            await self.join(channel)
             print(f"{self.guildid}: connected")
 
             print(f"{self.guildid}: getting songs")

@@ -76,7 +76,7 @@ class Queue(Cog):
     async def remove(self, ctx: actx, query: str):
         inst = handler.getInstance(ctx)
 
-        await dc.check_cross(ctx, inst.remove(query))
+        await dc.check_cross(ctx, await inst.remove(query))
         await inst.update_queue_embed()
 
 
@@ -92,7 +92,7 @@ class Queue(Cog):
             await ctx.interaction.delete_original_response()
             return
 
-        if inst.stop():
+        if await inst.stop():
             inst.update_now_playing()
             await inst.update_queue_embed()
             
@@ -104,3 +104,12 @@ class Queue(Cog):
             await ctx.send_response(dc.reactions.cross, ephemeral=True)
             await asyncio.sleep(5)
             await ctx.interaction.delete_original_response()
+
+
+    @slash_command(
+        description="ХТОСЬ ВИКЛЮЧИВ БОТА ПОВЕРНІТЬ ЯК БУЛО",
+    )
+    async def restore(self, ctx: actx):
+        inst = handler.getInstance(ctx)
+
+        await dc.check_cross(ctx, await inst.restore(force_join=True))

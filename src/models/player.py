@@ -57,7 +57,7 @@ class Player:
         self.state = PlayerStates.PAUSED
         return True
     
-    def remove(self, query: str) -> bool:
+    async def remove(self, query: str) -> bool:
         if self.queue.len() == 0 or not self.has_vc():
             return False
         
@@ -76,7 +76,7 @@ class Player:
             if not res == '':
                 # stop if queue is empty
                 if self.queue.len() == 0:
-                    self.stop()
+                    await self.stop()
                 success = True
 
         self.current -= current_reduce
@@ -93,13 +93,12 @@ class Player:
 
     
 
-    def stop(self) -> bool:
+    async def stop(self) -> bool:
         """ Stops the player, clears the queue and leaves the voice channel if it was connected.
         Gets called pretty much any time the bot is expected to stop playing music.
         (dc, stop, clear, etc.)
         Returns True if the player was connected to a voice channel, False otherwise.
         """
-        asyncio.create_task(self.save())
         had_vc = False
         # stop and leave vc
         if self.has_vc():
@@ -107,6 +106,8 @@ class Player:
             had_vc = True
             self.skipSkip = True
             self.vc.stop()
+
+        await self.save()
 
         self.state = PlayerStates.STOPPED
         self.current = -1
@@ -151,17 +152,20 @@ class Player:
     
 
     def play_from_queue(self, index: int, start: str | timedelta = "00:00:00"):
-        print("called play from queue")
         v_id = self.queue[index].id
         file = f'songs/{v_id}.mp3'
 
-        self.vc.play(discord.FFmpegPCMAudio(file, before_options=f"-ss {start}", options='-f s16le')
-                     , after=self.__after_song)
         if not isinstance(start, timedelta):
             h, m, s = map(int, start.split(":"))
             delta = timedelta(hours=h, minutes=m, seconds=s)
         else:
             delta = start
+
+        print(f"Playing song {index} from queue: {self.queue[index].title} (start: {start})")
+
+        self.vc.play(discord.FFmpegPCMAudio(file, before_options=f"-ss {start}", options='-f s16le')
+                     , after=self.__after_song)
+        self.state = PlayerStates.PLAYING
 
         self.song_start_time = datetime.now() - delta
         self.current = index

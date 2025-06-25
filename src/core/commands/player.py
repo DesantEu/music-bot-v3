@@ -37,7 +37,7 @@ class Player(Cog):
     )
     async def stop(self, ctx: actx):
         inst = handler.getInstance(ctx)
-        res = inst.stop() and await inst.leave()
+        res = await inst.stop() and await inst.leave()
         
         await dc.check_cross(ctx, res)
 
