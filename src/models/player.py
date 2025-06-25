@@ -94,7 +94,7 @@ class Player:
     
 
     async def stop(self, kick_blame: str | None = None) -> bool:
-        """ Stops the player, clears the queue and leaves the voice channel if it was connected.
+        """ Stops the player, clears the queue.
         Gets called pretty much any time the bot is expected to stop playing music.
         (dc, stop, clear, etc.)
         Returns True if the player was connected to a voice channel, False otherwise.
