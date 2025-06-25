@@ -50,7 +50,7 @@ class Admin(Cog):
 
                 await db.add_local_playlist(ctx.guild_id, name, real_songs)
 
-        await ctx.send_response(dc.reactions.check, view=views.Queue(), ephemeral=True)
+        await ctx.send_response(dc.reactions.check, ephemeral=True)
 
 
     @cache.command(name="drop_lpl")
@@ -62,7 +62,8 @@ class Admin(Cog):
     @slash_command()
     async def test(self, ctx: actx):
         # await db.create_cache()
-        await ctx.send_response(dc.reactions.fyou, view=views.Queue(), ephemeral=True)
+        # await ctx.send_response(dc.reactions.fyou, view=views.Queue(), ephemeral=True)
+        pass
 
 
     admin = SlashCommandGroup("admin", "admin bs", checks=[is_owner()])

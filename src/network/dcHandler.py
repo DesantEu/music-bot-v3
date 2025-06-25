@@ -1,7 +1,8 @@
 import asyncio
 import discord
 from discord import ApplicationContext as actx
-from locales import bot_locale as loc
+from models.long_message import LongMessage
+from models.enums import reactions
 
 # TODO: 
 # theres a lot of returns that only return 0 maybe add some checks or smth
@@ -9,141 +10,6 @@ from locales import bot_locale as loc
 color_pink = discord.Colour.from_rgb(226, 195, 205)
 # color_pink_old = discord.Color.from_rgb(255, 166, 201)
 
-class LongMessage:
-    def __init__(self, title:str, smaller_title:str, content:list[tuple[str, str]], page=0):
-        self.page:int = page
-        self.pages:list[str] = []
-        self.title = title
-        self.smaller_title = smaller_title
-        self.content = content
-        self.isMultipage = False
-        self.hasReactions = False #TODO: there must be a way to avoid this
-
-        self.message: discord.Message | discord.Interaction
-
-        self.regenerate()
-
-
-    def regenerate(self):
-        char_limit = 1024
-        # handle multipage
-        if len('\n'.join([f'{i[0]} {i[1]}' for i in self.content])) > char_limit:
-            self.pages.clear()
-            line = 0
-            page = 0
-            
-            # generate pages
-            self.pages.append('')
-            while line < len(self.content):
-                while line < len(self.content) and len(self.pages[page]) + len(f'{self.content[line][0]} {self.content[line][1]}') + 1 < char_limit:
-                    newline =  f'{self.content[line][0]} {self.content[line][1]}\n'
-                    self.pages[page] += newline
-                    line += 1
-                page += 1
-                self.pages.append('')
-            self.isMultipage = True
-            self.pages.pop(-1)
-
-        # handle single page
-        else:
-            self.page = 0
-            self.pages.clear()
-
-            self.pages.append('\n'.join([f'{i[0]} {i[1]}' for i in self.content]))
-
-            self.isMultipage = False
-
-
-    def genEmbed(self, color=color_pink):
-        emb = discord.Embed(title=self.title)
-        emb.color = color
-        emb.add_field(name=self.smaller_title, value=self.pages[self.page])
-        if self.isMultipage:
-            emb.set_footer(text=f'{loc.page} {self.page + 1}')
-
-        return emb
-
-
-    async def edit(self, ind, status='', text='', title='', smaller_title=''):
-        if not status == '':
-            self.content[ind][0] = status
-
-        if not text == '':
-            self.content[ind][1] = text
-
-        if not title == '':
-            self.title = title
-
-        if not smaller_title == '':
-            self.smaller_title = smaller_title
-
-        self.regenerate()
-
-        await self.message.edit(embed=self.genEmbed());
-
-
-    async def send(self, ctx: actx, color=color_pink, respond=False, ephemeral=False):
-        if respond:
-            interaction = await ctx.send_response(embed=self.genEmbed(color=color), ephemeral=ephemeral)
-            self.message = interaction
-        else:
-            self.message = await ctx.channel.send(embed=self.genEmbed(color=color))
-        # await self.refreshReactions()
-
-
-    async def parse_reaction(self, reaction):
-        if not reaction == reactions.left_arrow and not reaction == reactions.right_arrow:
-            return -2
-        if not self.isMultipage:
-            return 1
-
-        changed = False
-        if reaction == reactions.left_arrow:
-            if not self.page < 1:
-                self.page -= 1
-                changed = True
-            else:
-                return 1
-
-        elif reaction == reactions.right_arrow:
-            if not self.page == len(self.pages) - 1:
-                self.page += 1
-                changed = True
-            else:
-                return 1
-
-        if changed:
-            self.regenerate()
-            await self.message.edit(embed=self.genEmbed())
-            return 0
-        return -1
-
-    # async def refreshReactions(self):
-    #     if self.isMultipage and not self.hasReactions:
-    #         await self.message.clear_reaction(reactions.right_arrow)
-    #         await self.message.clear_reaction(reactions.left_arrow)
-    #         await self.message.add_reaction(reactions.left_arrow)
-    #         await self.message.add_reaction(reactions.right_arrow)
-    #         self.hasReactions = True
-
-    #     if not self.isMultipage and self.hasReactions:
-    #         await self.message.clear_reaction(reactions.right_arrow)
-    #         await self.message.clear_reaction(reactions.left_arrow)
-    #         self.hasReactions = False
-        
-    async def setContent(self, content:list[tuple[str, str]]):
-        self.content = content
-        self.regenerate()
-        await self.message.edit(embed=self.genEmbed())
-        # await self.refreshReactions()
-        return 0
-
-    def append(self):
-        return
-
-
-    def __str__(self):
-        return ''
 
 messages:dict[int, discord.Message] = {}
 long_messages:dict[int, LongMessage] = {}
@@ -266,40 +132,4 @@ async def check_cross(ctx: actx, res: bool):
         await ctx.send_response(reactions.cross, ephemeral=True)
         await asyncio.sleep(5)
         await ctx.interaction.delete_original_response()
-
-
-class reactions:
-    check = '✅'
-    cross = '❌'
-    warn = '⚠️'
-    fyou = '🖕'
-    wave = '👋'
-    thumbs_up = '👍'
-    thinking = '🧠'
-   
-    cold = '🥶'
-    hot = '🥵'
-    mew1 = '🤫'
-    mew2 = '🧏'
-
-    pls ='🥺'
-    pls_tears = '🥹'
-
-    black_circle = '⚫'
-    green_circle = '🟢'
-    yellow_circle = '🟡'
-    orange_circle = '🟠'
-    red_circle = '🔴'
-
-    left_arrow = '⬅️'
-    right_arrow = '➡️'
-    down_arrow = '⬇️'
-    play = '▶️'
-
-    internet = '🌐'
-    search = '🔍'
-    folder = '📁'
-    
-    
-
 

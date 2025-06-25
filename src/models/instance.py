@@ -2,6 +2,7 @@ from datetime import datetime
 import discord
 import asyncio
 from models.enums import PlayerStates
+from models.long_message import LongMessage
 from models.past_queue import PastQueue
 from models.player import Player
 from models.song import SongStatus
@@ -284,7 +285,7 @@ class Instance(Player):
                     # create placeholder long message
                     print(f"{self.guildid}: creating queue message")
                     self.queue_message = qm_id
-                    dc.long_messages[qm_id] = dc.LongMessage(loc.queue, '...', self.queue.toContent())
+                    dc.long_messages[qm_id] = LongMessage(loc.queue, '...', self.queue.toContent())
                     dc.long_messages[qm_id].message = await qm_channel.fetch_message(qm_id)
                     print(f"{self.guildid}: done")
         except Exception as e:
