@@ -25,8 +25,14 @@ def getInstance(ctx: actx) -> Instance:
 
 
 async def handle_voice(member, before, after):
-    if not dc.isInVC(member):
-        await instances[member.guild.id].on_disconnect()
+    if dc.isInVC(member):
+        return
+    
+    inst = instances[member.guild.id]
+    if not inst.should_be_connected:
+        return
+    else:
+        await inst.on_disconnect()
 
 
 async def restore_instances(bot: Bot):

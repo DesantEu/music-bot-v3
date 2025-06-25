@@ -27,6 +27,7 @@ class Instance(Player):
         self.kick_blame: str | None = None
 
         self.bot = bot
+        self.should_be_connected: bool = False
 
         print(f"created instance {self.guildid}")
 
@@ -166,10 +167,12 @@ class Instance(Player):
             if not self.has_vc():
                 self.vc = await channel.connect()
                 self.kick_blame = None
+                self.should_be_connected = True
                 return True
             # move to other channel maybe
             if not self.vc.channel == channel:
                 await self.vc.move_to(channel)
+                self.should_be_connected = True
                 self.kick_blame = None
             return True
         except Exception as e:
@@ -185,6 +188,7 @@ class Instance(Player):
             self.vc.cleanup()
             await self.vc.disconnect()
             del(self.vc)
+            self.should_be_connected = False
 
             return True
         except Exception as e:
