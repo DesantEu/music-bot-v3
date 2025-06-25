@@ -92,7 +92,7 @@ class Queue(Cog):
             await ctx.interaction.delete_original_response()
             return
 
-        if await inst.stop(f"{ctx.author.display_name} очистив чергу") and await inst.leave():
+        if await inst.stop(f"{ctx.author.display_name} очистив чергу"):
             inst.update_now_playing()
             await inst.update_queue_embed()
             
