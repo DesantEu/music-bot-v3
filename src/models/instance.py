@@ -18,6 +18,9 @@ class Instance(Player):
         self.queue_message: int = 0
         self.queue_tracker = None
 
+        self._update_content_task: asyncio.Task | None = None
+        self._update_title_task: asyncio.Task | None = None
+
         self.bot = bot
 
         print(f"created instance {self.guildid}")
@@ -72,12 +75,34 @@ class Instance(Player):
 
 
     async def update_queue_embed(self):
+        # cancel old task 
+        if self._update_content_task is not None and not self._update_content_task.done():
+            self._update_content_task.cancel()
+
+        self._update_content_task = asyncio.create_task(self._update_queue_embed_now())
+        
+
+    async def _update_queue_embed_now(self):
+        await asyncio.sleep(0.5)  # debounce time
+
         content = self.queue.toContent()
+        old = dc.long_messages[self.queue_message].content
+
+        if content == old:
+            return
+        
         await dc.edit_long_content(self.queue_message, content)
+            
 
 
     def update_now_playing(self):
         song_title = self.__get_now_playing()
+
+        if song_title == dc.long_messages[self.queue_message].title:
+            return
+        # if we have a task running, cancel it
+        if self._update_title_task is not None and not self._update_title_task.done():
+            self._update_title_task.cancel()
 
         asyncio.run_coroutine_threadsafe(
             dc.edit_long_smaller_title(self.queue_message, song_title),
