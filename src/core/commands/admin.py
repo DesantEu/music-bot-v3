@@ -19,7 +19,7 @@ class Admin(Cog):
     cache = SlashCommandGroup(
         "cache", 
         "BACKEND BS BE CAREFUL",
-        checks=[is_owner()],
+        checks=[is_owner().predicate],
     )
 
     @cache.command(name="transfer")
@@ -66,7 +66,7 @@ class Admin(Cog):
         pass
 
 
-    admin = SlashCommandGroup("admin", "admin bs", checks=[is_owner()])
+    admin = SlashCommandGroup("admin", "admin bs", checks=[is_owner().predicate])
 
     @admin.command(name="save_past", description="force save current queue")
     async def past_save(self, ctx:actx):
