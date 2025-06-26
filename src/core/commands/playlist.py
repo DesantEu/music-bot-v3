@@ -1,18 +1,17 @@
-import os, json
-from asyncio import sleep
+import asyncio
 
-from discord.ext.commands import Cog, slash_command, is_owner
+from discord.ext.commands import Cog
 from discord.commands import Option
 from discord import ApplicationContext as actx
-from discord import SlashCommandGroup, SlashCommandOptionType as scot, Bot
+from discord import SlashCommandGroup, Bot
 
-import views
 from core import handler
 from models.local_playlist import LocalPlaylist
 from models.autocomplete import Autocomplete as ac
 from network import dcHandler as dc
 from locales import bot_locale as loc
-from storage import db
+from models.enums import reactions
+from models.playlist import Playlist as YtPlaylist
 
 class Playlist(Cog):
     def __init__(self, bot: Bot):
@@ -86,6 +85,21 @@ class Playlist(Cog):
         description="playlist by link"
     )
     async def playlist_youtube(self, ctx: actx, link: str):
-        await ctx.send_response("шо не работает?", ephemeral=True)
+        inst = handler.getInstance(ctx)
+        await ctx.send_response(reactions.search, ephemeral=True)
+
+        try:
+            pl = await YtPlaylist.search(link, inst.queue)
+            await inst.play(ctx, pl.get_links())
+
+            await ctx.interaction.delete_original_response()
+
+        except Exception as e:
+            print(f"Error while searching playlist: {e}")
+            await ctx.interaction.edit_original_response(
+                content=reactions.cross,
+            )
+            await asyncio.sleep(1)
+            await ctx.interaction.delete_original_response()
 
 
