@@ -82,7 +82,14 @@ class Playlist(Cog):
 
     @playlist_group.command(
         name="youtube", 
-        description="playlist by link"
+        description="playlist by link",
+        options=[
+            Option(
+                description="Назва або лінк",
+                name="prompt",
+                autocomplete=ac.playlist
+            )
+        ]
     )
     async def playlist_youtube(self, ctx: actx, link: str):
         inst = handler.getInstance(ctx)

@@ -70,3 +70,60 @@ async def get_playlist_songs(playlist_id: str) -> list[tuple[str, str]]:
         return res
     else:
         return []
+    
+
+async def get_pl_autocomplete(title: str) -> list[str]:
+    cnx = await get_connection()
+    cursor = await cnx.cursor()
+    mask = '%' + title + '%'
+    sql_query = (
+        "SELECT title "
+        "FROM playlists "
+        "WHERE title LIKE %s "
+        "LIMIT 10"
+    )
+    data = (mask,)
+    print(f"searching {title}")
+    await cursor.execute(sql_query, data)
+
+    res = await cursor.fetchall()
+    titles = []
+
+    if len(res) > 0:
+        titles = [r[0] for r in res] # flatten
+        print(titles)
+    else:
+        print("failed to find")
+
+    await cursor.close()
+    await cnx.shutdown()
+    
+    return titles
+
+
+async def get_playlist_songs_by_name(title: str) -> list[tuple[str, str]]:
+    """returns a list of tuples (song_id, song_title) for the given playlist_id"""
+    cnx = await get_connection()
+    cursor = await cnx.cursor()
+
+    query = (
+        "SELECT songs.id, songs.title "
+        "FROM playlists "
+        "JOIN playlist_songs ON playlist_songs.p_id = playlists.id "
+        "JOIN songs ON songs.id = playlist_songs.v_id "
+        "WHERE playlists.title = %s "
+        "ORDER BY playlist_songs.ind ASC"
+    )
+    data = (title,)
+
+    await cursor.execute(query, data)
+    res = await cursor.fetchall()
+    print(res)
+    
+    await cursor.close()
+    await cnx.shutdown()
+
+    if len(res) > 0:
+        return res
+    else:
+        return []

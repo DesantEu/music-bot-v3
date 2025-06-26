@@ -22,3 +22,8 @@ class Autocomplete:
         if gid is None:
             return []
         return await db.get_lpl_autocomplete(ctx.value, gid)
+    
+    @staticmethod
+    async def playlist(ctx: acctx) -> list[str]:
+        print(f"autocomplete got: '{ctx.value}'")
+        return await db.get_pl_autocomplete(ctx.value)

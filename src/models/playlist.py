@@ -13,12 +13,6 @@ class Playlist:
         self.id: str
         self.songs: list[Song]
 
-
-    def get_links(self) -> list[str]:
-        return ["https://www.youtube.com/watch?v=" + i.id for i in self.songs]
-    
-    def get_ids(self) -> list[str]:
-        return [i.id for i in self.songs]
     
     @classmethod
     async def search(cls, query: str, queue: Queue) -> 'Playlist':
@@ -30,7 +24,10 @@ class Playlist:
         id = yt.get_id_from_playlist_link(query)
 
         # search in db
-        songs = await db.get_playlist_songs(id)
+        if query.startswith("https://"):
+            songs = await db.get_playlist_songs(id)
+        else:
+            songs = await db.get_playlist_songs_by_name(query)
         # on local search success
         if not songs == []:
             inst = cls()
@@ -63,3 +60,9 @@ class Playlist:
         # save to db
         await db.add_playlist(self.id, self.title, self.get_ids())
 
+
+    def get_links(self) -> list[str]:
+        return ["https://www.youtube.com/watch?v=" + i.id for i in self.songs]
+    
+    def get_ids(self) -> list[str]:
+        return [i.id for i in self.songs]
