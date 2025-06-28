@@ -58,12 +58,34 @@ def get_cache(prompt, is_link=False) -> tuple[str, str]:
 
 def get_playlist_cache(link) -> tuple[str, str, list[str]]:
     """returns id, title, [song_ids]"""
-    res = _dl.extract_info(link, download=False)
+    ydl_opts = {
+        'extract_flat': True,
+        'dump_single_json': True,
+    }
 
-    if res:
-        return res['id'], res['title'], [i['id'] for i in res['entries']]
-    else:
-        return '', '', []
+    with yt.YoutubeDL(ydl_opts) as ydl:
+        print("extracting info")
+        info = ydl.extract_info(link, download=False)
+        if info is None:
+            return '', '', []
+        while info.get('_type') == 'url':
+            print(info)
+            print("getting deeper")
+            info = ydl.extract_info(info['url'], download=False)
+            if info is None:
+                return '', '', []
+        print("getting entries")
+        entries = info.get('entries', [])
+        print("getting tite")
+        title = info['title']
+
+        print(f"{info['id']}, {info['title']}, {[e['id'] for e in entries]}")
+
+        if entries:
+            print("returning")
+            return info['id'], title, [entry['id'] for entry in entries]
+        else:
+            return '', '', []
 
 
 def get_mix_links(link, limit) -> list[str]:

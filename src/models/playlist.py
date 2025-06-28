@@ -36,7 +36,7 @@ class Playlist:
         # else search on yt
         else:
             # get info from yt
-            info = await asyncio.to_thread(yt.get_playlist_cache, id)
+            info = await asyncio.to_thread(yt.get_playlist_cache, query)
             if info[0] == '':
                 raise Exception(f"Playlist with id {id} not found")
             
@@ -51,9 +51,19 @@ class Playlist:
 
         
     async def wait_and_save(self, queue: Queue) -> None:
+        # wait for all songs to be added to queue
+        while True:
+            queue_ids = (s.id for s in queue.q)
+            target_ids = set(self.get_ids())
+            if target_ids.issubset(queue_ids):
+                break
+            print(" waiting for queue")
+            await asyncio.sleep(1)
+
         # wait for all songs to be ready
         ready = [SongStatus.READY, SongStatus.FAILED]
-        while not all([s.status in ready for s in queue.q if s.id in self.get_ids()]):
+        ids = self.get_ids()
+        while not all(s.status in ready for s in queue.q if s.id in ids):
             print("Waiting for songs to be ready...")
             await asyncio.sleep(0.3)
         
