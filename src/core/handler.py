@@ -4,7 +4,7 @@ from models.instance import Instance
 from network import dcHandler as dc
 import os
 from storage import db
-from discord import ApplicationContext as actx, Bot
+from discord import ApplicationContext as actx, Bot, Member, VoiceState
 
 
 admins = ['desantua']
@@ -24,7 +24,7 @@ def getInstance(ctx: actx) -> Instance:
     return instances[gid]
 
 
-async def handle_voice(member, before, after):
+async def handle_voice(member: Member, before: VoiceState, after: VoiceState):
     if dc.isInVC(member):
         return
     
@@ -32,6 +32,10 @@ async def handle_voice(member, before, after):
     if not inst.should_be_connected:
         return
     else:
+        print("WE ARE IN HANDLE_VOICE")
+        print(f"dc.isInVC(member): {dc.isInVC(member)}")
+        print(f"member: {member.name}")
+        print(f"b:{before.channel}, a:{after.channel}")
         await inst.on_disconnect()
 
 
