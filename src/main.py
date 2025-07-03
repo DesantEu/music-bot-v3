@@ -26,6 +26,20 @@ async def on_voice_state_update(member, before, after):
         await handler.handle_voice(member, before, after)
 
 
+@bot.event
+async def on_connect():
+    print(">>> EVENT: ON CONNECT")
+
+
+@bot.event
+async def on_disconnect():
+    print(">>> EVENT: ON DISCONNECT")
+
+
+@bot.event
+async def on_error(event: str, *args, **kwargs):
+    print(f">>> EVENT: ON ERROR ({event})")
+
 # add commands
 bot.add_cog(commands.Player(bot))
 bot.add_cog(commands.Playlist(bot))
