@@ -24,6 +24,7 @@ class Instance(Player):
         self._update_title_task:    asyncio.Task | None = None
         self._save_task:            asyncio.Task | None = None
         self._restore_task:         asyncio.Task | None = None
+        self._join_task:            asyncio.Task | None = None
         self.kick_blame: str | None = None
 
         self.bot = bot
@@ -75,7 +76,7 @@ class Instance(Player):
         await self.update_queue_embed()
         # start playing
         if self.current == -1:
-            while not self.has_vc():
+            while self.vc is None or not self.vc.is_connected() :
                 await asyncio.sleep(0.2)
             self.play_from_queue(0)
 
@@ -130,13 +131,6 @@ class Instance(Player):
 
         await dc.edit_long_smaller_title(self.queue_message, song_title)
         
-
-    def has_vc(self) -> bool:
-        try:
-            self.vc
-            return True
-        except:
-            return False
         
 
     def __get_now_playing(self) -> str:
@@ -150,44 +144,69 @@ class Instance(Player):
         return song_title
 
 
-    async def join(self, ctx: actx | discord.VoiceChannel) -> bool:
+    async def join(self, ctx: actx | discord.VoiceChannel):
+        print(">>> JOIN CALLED")
         # grab channel
         channel: discord.VoiceChannel
         if type(ctx) is actx:
+            # handle situations where user is not in channe;
+            if not dc.isInVC(ctx.author):
+                print(f"{ctx.author.name} is not in vc")
+                return False
             channel = ctx.user.voice.channel
         elif type(ctx) is discord.VoiceChannel:
             channel = ctx
         else:
             print(f"join called with {type(ctx)}")
             return False
+        
+        # if we have a task running, cancel it
+        if self._join_task is not None and not self._join_task.done():
+            self._join_task.cancel()
+            print(f"canceled old title update task for {self.guildid}")
 
+        self._join_task = self.bot.loop.create_task(
+            self.__join_now(channel)
+        )
 
+        
+    async def __join_now(self, channel: discord.VoiceChannel):
         try:
+            print("debouncing join")
+            await asyncio.sleep(0.3)
+            # cleanup zombie connection
+            if self.vc is not None and not self.vc.is_connected():
+                await self. vc.disconnect()
+                self.vc.cleanup()
+                self.vc = None
             # connect if not yet connected
-            if not self.has_vc():
+            if self.vc is None or not self.vc.is_connected():
                 self.vc = await channel.connect()
                 self.kick_blame = None
                 self.should_be_connected = True
-                return True
-            # move to other channel maybe
-            if not self.vc.channel == channel:
+            # else move to other channel maybe
+            elif not self.vc.channel == channel:
                 await self.vc.move_to(channel)
-                self.should_be_connected = True
                 self.kick_blame = None
-            return True
+                self.should_be_connected = True
+            else: 
+                raise Exception("WHAT????")
         except Exception as e:
             print(f"exception caught: {e}")
-            return False
 
 
     async def leave(self) -> bool:
         try:
-            if not self.has_vc():
+            if self.vc is None:
+                print(">>> VC IS NONE ON LEAVE")
                 return False
-
-            self.vc.cleanup()
-            await self.vc.disconnect()
-            del(self.vc)
+            if self.vc.is_connected():
+                print(">>> DOING VC.DISCONNECT")
+                await self.vc.disconnect()
+            if self.vc is not None:
+                print(">>> DOING VC.CLEANUP")
+                self.vc.cleanup()
+                self.vc = None
             self.should_be_connected = False
 
             return True
@@ -224,7 +243,7 @@ class Instance(Player):
 
         # ensure we do have a vc
         vc_id = 0
-        if self.has_vc() \
+        if self.vc is not None and self.vc.is_connected() \
         and (type(self.vc.channel) is discord.channel.VoiceChannel \
         or type(self.vc.channel) is discord.channel.StageChannel):
             vc_id = int(self.vc.channel.id)
@@ -329,7 +348,8 @@ class Instance(Player):
             # play old current
             print(f"{self.guildid}: resuming")
             self.skipSkip = True
-            self.vc.stop()
+            if self.vc is not None and self.vc.is_connected() and self.vc.is_playing():
+                self.vc.stop()
             self.play_from_queue(current, song_time)
             self.state = state
 

@@ -20,7 +20,7 @@ class Player:
 
         self.volume = 1.0
 
-        self.vc: discord.VoiceClient
+        self.vc: discord.VoiceClient | None = None
         self.guildid: int
         self.state = PlayerStates.STOPPED
 
@@ -58,7 +58,7 @@ class Player:
         return True
     
     async def remove(self, query: str, ctx: actx) -> bool:
-        if self.queue.len() == 0 or not self.has_vc():
+        if self.queue.len() == 0 or self.vc is None or not self.vc.is_connected():
             return False
         
         success = False
@@ -102,7 +102,7 @@ class Player:
         self.kick_blame = kick_blame
         had_vc = False
         # stop and leave vc
-        if self.has_vc():
+        if not self.vc is None and self.vc.is_connected():
         # drop play.after
             had_vc = True
             self.skipSkip = True
@@ -118,7 +118,7 @@ class Player:
 
 
     def skip(self, num='', afterSong=False) -> bool:
-        if not self.has_vc() or self.queue.len() == 0:
+        if self.vc is None or not self.vc.is_connected() or self.queue.len() == 0:
             return False
         
         # handle numbers:
@@ -153,6 +153,8 @@ class Player:
     
 
     def play_from_queue(self, index: int, start: str | timedelta = "00:00:00"):
+        if self.vc is None:
+            raise Exception("VC DOES NOT EXIST")
         v_id = self.queue[index].id
         file = f'songs/{v_id}.mp3'
 
@@ -188,10 +190,6 @@ class Player:
 
     async def save(self) -> bool:
         raise Exception("NOT OVERRIDDEN (save)")
-
-    def has_vc(self) -> bool:
-        # return False
-        raise Exception("NOT OVERRIDDEN (vc)")
 
 
     def __parse_remove(self, query: str) -> list[int]:
